@@ -1,0 +1,106 @@
+:root {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #18211b;
+  background: #f2f5ed;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(242, 186, 73, .24), transparent 28rem),
+    #f2f5ed;
+}
+
+main {
+  width: min(880px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 64px 0 96px;
+}
+
+.eyebrow {
+  color: #2f6b4f;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+h1 {
+  margin: 8px 0 12px;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: clamp(2.3rem, 7vw, 4.8rem);
+  line-height: 1;
+}
+
+.lead { max-width: 620px; color: #506057; line-height: 1.75; }
+
+.panel, .course-card {
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid #dbe3d8;
+  border-radius: 18px;
+  box-shadow: 0 16px 45px rgba(53, 72, 59, .08);
+}
+
+.panel { margin: 38px 0; padding: 24px; }
+
+form { display: grid; gap: 18px; }
+label { display: grid; gap: 8px; font-weight: 700; }
+
+input, textarea {
+  width: 100%;
+  border: 1px solid #bdc9be;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #fff;
+}
+
+textarea { min-height: 84px; resize: vertical; }
+
+button {
+  width: fit-content;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font: inherit;
+  font-weight: 800;
+  color: white;
+  background: #216245;
+  cursor: pointer;
+}
+
+button:hover { background: #154b34; }
+button.secondary { color: #216245; background: #e1ebe2; }
+button.danger { color: #8a3029; background: #f8e3df; }
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.course-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.course-card { padding: 20px; }
+.course-card h3 { margin: 0 0 8px; }
+.course-card p { min-height: 48px; color: #59665e; line-height: 1.55; }
+.empty { color: #69756d; padding: 24px 0; }
+#form-message { min-height: 1.5em; color: #2f6b4f; }
+#document-message { min-height: 1.5em; color: #2f6b4f; }
+.hidden { display: none; }
+.document-list { margin-top: 20px; display: grid; gap: 10px; }
+.document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid #dbe3d8;
+  padding-top: 12px;
+}
+.document-meta { color: #69756d; font-size: .9rem; }

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>大学生学习助手</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">UNIVERSITY STUDY ASSISTANT</p>
+        <h1>先建立你的课程空间</h1>
+        <p class="lead">以后每门课程的资料、问答、作业辅导和复习记录都会放在各自的空间里。</p>
+      </header>
+
+      <section class="panel">
+        <form id="course-form">
+          <label>
+            课程名称
+            <input id="name" name="name" maxlength="120" required placeholder="例如：管理学原理" />
+          </label>
+          <label>
+            简短说明
+            <textarea id="description" name="description" maxlength="1000" placeholder="例如：本学期专业必修课"></textarea>
+          </label>
+          <button type="submit">创建课程</button>
+          <p id="form-message" role="status"></p>
+        </form>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <h2>我的课程</h2>
+          <button class="secondary" id="refresh" type="button">刷新</button>
+        </div>
+        <div id="course-list" class="course-list"></div>
+      </section>
+
+      <section id="materials-panel" class="panel hidden">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">COURSE MATERIALS</p>
+            <h2 id="selected-course">课程资料</h2>
+          </div>
+          <button class="secondary" id="close-materials" type="button">关闭</button>
+        </div>
+        <form id="document-form">
+          <label>
+            选择 Markdown 或纯文本资料
+            <input id="document-file" type="file" accept=".md,.txt,text/plain,text/markdown" required />
+          </label>
+          <button type="submit">上传资料</button>
+          <p id="document-message" role="status"></p>
+        </form>
+        <div id="document-list" class="document-list"></div>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
