@@ -14,6 +14,8 @@ os.environ["STUDY_ASSISTANT_DB"] = str(CHECK_ROOT / "integration.db")
 from app.main import (  # noqa: E402
     CourseCreate,
     DocumentCreate,
+    QuestionCreate,
+    ask_course,
     create_course,
     create_document,
     delete_course,
@@ -46,13 +48,24 @@ def main() -> None:
         assert len(results) == 1
         assert results[0]["filename"] == "demo.md"
         assert results[0]["section_title"] == "自制测试资料"
+        answer = ask_course(
+            int(course["id"]), QuestionCreate(question="什么是虚构内容？")
+        )
+        assert answer["grounding_status"] == "grounded"
+        assert answer["generation_method"] == "extractive"
+        assert answer["citations"][0]["filename"] == "demo.md"
+        missing = ask_course(
+            int(course["id"]), QuestionCreate(question="什么是量子纠缠？")
+        )
+        assert missing["grounding_status"] == "no_evidence"
+        assert missing["citations"] == []
 
         delete_document(int(course["id"]), int(document["id"]))
         assert list_documents(int(course["id"])) == []
         assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: course, document, chunk, search, and deletion lifecycle")
+        print("INTEGRATION OK: upload, retrieval, grounded answer, citation, and deletion")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

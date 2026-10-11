@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .answers import GroundedAnswerService, QuestionValidationError
 from .courses import CourseNotFoundError, CourseRepository
 from .documents import (
     CourseNotFoundError as DocumentCourseNotFoundError,
@@ -29,6 +30,7 @@ app = FastAPI(title="大学生学习助手", version="0.1.0")
 repository = CourseRepository()
 document_repository = DocumentRepository()
 retrieval_repository = RetrievalRepository()
+answer_service = GroundedAnswerService()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -41,6 +43,10 @@ class CourseCreate(BaseModel):
 class DocumentCreate(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content: str
+
+
+class QuestionCreate(BaseModel):
+    question: str = Field(min_length=3, max_length=2000)
 
 
 @app.get("/", include_in_schema=False)
@@ -128,4 +134,14 @@ def search_course(course_id: int, q: str, limit: int = 10) -> list[dict[str, obj
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except SearchValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/courses/{course_id}/questions")
+def ask_course(course_id: int, payload: QuestionCreate) -> dict[str, object]:
+    try:
+        return answer_service.answer(course_id, payload.question).to_dict()
+    except SearchCourseNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (QuestionValidationError, SearchValidationError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

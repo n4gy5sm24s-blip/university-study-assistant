@@ -13,6 +13,10 @@ const searchForm = document.querySelector("#search-form");
 const searchQuery = document.querySelector("#search-query");
 const searchMessage = document.querySelector("#search-message");
 const searchResults = document.querySelector("#search-results");
+const questionForm = document.querySelector("#question-form");
+const questionInput = document.querySelector("#question-input");
+const questionMessage = document.querySelector("#question-message");
+const answerCard = document.querySelector("#answer-card");
 let selectedCourse = null;
 
 function escapeHtml(value) {
@@ -166,6 +170,36 @@ searchForm.addEventListener("submit", async event => {
   `).join("");
 });
 
+questionForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!selectedCourse) return;
+  questionMessage.textContent = "正在课程资料中查找依据……";
+  answerCard.classList.add("hidden");
+  const response = await fetch(`/api/courses/${selectedCourse}/questions`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({question: questionInput.value})
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    questionMessage.textContent = result.detail || "提问失败";
+    return;
+  }
+  questionMessage.textContent = result.grounding_status === "grounded"
+    ? "已找到资料依据"
+    : "资料依据不足";
+  const citations = result.citations.map(citation => `
+    <li><strong>[${citation.number}] ${escapeHtml(citation.filename)}</strong>${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""} · 片段 ${citation.sequence + 1}</li>
+  `).join("");
+  answerCard.innerHTML = `
+    <h3>回答</h3>
+    <p>${escapeHtml(result.answer).replaceAll("\n", "<br>")}</p>
+    ${citations ? `<h4>资料来源</h4><ol>${citations}</ol>` : ""}
+    <div class="document-meta">生成方式：${result.generation_method === "extractive" ? "原文依据整理" : "未生成"}</div>
+  `;
+  answerCard.classList.remove("hidden");
+});
+
 closeMaterials.addEventListener("click", () => {
   materialsPanel.classList.add("hidden");
   selectedCourse = null;
@@ -173,6 +207,10 @@ closeMaterials.addEventListener("click", () => {
   searchForm.reset();
   searchMessage.textContent = "";
   searchResults.innerHTML = "";
+  questionForm.reset();
+  questionMessage.textContent = "";
+  answerCard.innerHTML = "";
+  answerCard.classList.add("hidden");
 });
 
 refresh.addEventListener("click", loadCourses);

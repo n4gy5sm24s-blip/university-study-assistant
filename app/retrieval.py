@@ -10,6 +10,10 @@ from .database import connect, initialize
 
 MAX_CHUNK_CHARACTERS = 800
 _MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+_QUERY_NOISE = re.compile(
+    r"请问|麻烦|帮我|解释一下|介绍一下|告诉我|什么是|是什么意思|为什么|怎么|如何|"
+    r"请|呢|吗|？|\?|！|!|，|,|。|\.|：|:|；|;|\s+"
+)
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,19 @@ class SearchValidationError(ValueError):
 
 class SearchCourseNotFoundError(LookupError):
     pass
+
+
+def build_fts_query(query: str) -> str:
+    compact = _QUERY_NOISE.sub("", query.strip())
+    if len(compact) < 3:
+        compact = re.sub(r"\s+", "", query.strip())
+    terms = [compact]
+    if len(compact) > 3:
+        terms.extend(compact[index : index + 3] for index in range(len(compact) - 2))
+    unique_terms = list(dict.fromkeys(term for term in terms if len(term) >= 3))
+    return " OR ".join(
+        f'"{term.replace(chr(34), chr(34) * 2)}"' for term in unique_terms
+    )
 
 
 def _pack_paragraphs(
@@ -141,7 +158,7 @@ class RetrievalRepository:
         if len(clean_query) < 3:
             raise SearchValidationError("搜索词至少需要 3 个字符")
         safe_limit = max(1, min(limit, 20))
-        literal_query = f'"{clean_query.replace(chr(34), chr(34) * 2)}"'
+        fts_query = build_fts_query(clean_query)
         with connect(self.database) as connection:
             course = connection.execute(
                 "SELECT id FROM courses WHERE id = ?", (course_id,)
@@ -160,7 +177,7 @@ class RetrievalRepository:
                 ORDER BY score, c.id
                 LIMIT ?
                 """,
-                (literal_query, course_id, safe_limit),
+                (fts_query, course_id, safe_limit),
             ).fetchall()
         return [SearchResult(**dict(row)) for row in rows]
 

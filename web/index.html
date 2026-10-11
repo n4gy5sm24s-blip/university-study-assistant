@@ -64,6 +64,16 @@
           <p id="search-message" role="status"></p>
         </form>
         <div id="search-results" class="document-list"></div>
+        <hr />
+        <form id="question-form">
+          <label>
+            根据课程资料提问
+            <textarea id="question-input" minlength="3" required placeholder="例如：什么是竞争优势？"></textarea>
+          </label>
+          <button type="submit">查找资料依据</button>
+          <p id="question-message" role="status"></p>
+        </form>
+        <article id="answer-card" class="answer-card hidden"></article>
       </section>
     </main>
     <script src="/static/app.js"></script>
