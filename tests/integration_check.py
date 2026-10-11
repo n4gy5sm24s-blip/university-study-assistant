@@ -21,6 +21,7 @@ from app.main import (  # noqa: E402
     health,
     list_courses,
     list_documents,
+    search_course,
 )
 
 
@@ -41,12 +42,17 @@ def main() -> None:
         )
         assert document["status"] == "ready"
         assert len(list_documents(int(course["id"]))) == 1
+        results = search_course(int(course["id"]), "虚构内容")
+        assert len(results) == 1
+        assert results[0]["filename"] == "demo.md"
+        assert results[0]["section_title"] == "自制测试资料"
 
         delete_document(int(course["id"]), int(document["id"]))
         assert list_documents(int(course["id"])) == []
+        assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: course and document lifecycle")
+        print("INTEGRATION OK: course, document, chunk, search, and deletion lifecycle")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

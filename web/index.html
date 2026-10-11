@@ -54,6 +54,16 @@
           <p id="document-message" role="status"></p>
         </form>
         <div id="document-list" class="document-list"></div>
+        <hr />
+        <form id="search-form">
+          <label>
+            搜索这门课程的资料
+            <input id="search-query" minlength="3" required placeholder="例如：竞争优势" />
+          </label>
+          <button type="submit">搜索资料</button>
+          <p id="search-message" role="status"></p>
+        </form>
+        <div id="search-results" class="document-list"></div>
       </section>
     </main>
     <script src="/static/app.js"></script>

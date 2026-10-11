@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 
 from .database import connect, database_path, initialize
+from .retrieval import index_document
 
 
 SUPPORTED_SUFFIXES = {".txt": "text/plain", ".md": "text/markdown"}
@@ -111,6 +112,13 @@ class DocumentRepository:
                         str(stored_file),
                         created_at,
                     ),
+                )
+                index_document(
+                    connection,
+                    int(cursor.lastrowid),
+                    course_id,
+                    content,
+                    media_type,
                 )
                 connection.commit()
             except Exception:

@@ -15,6 +15,11 @@ from .documents import (
     DocumentValidationError,
     DuplicateDocumentError,
 )
+from .retrieval import (
+    RetrievalRepository,
+    SearchCourseNotFoundError,
+    SearchValidationError,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -23,6 +28,7 @@ WEB_DIR = BASE_DIR / "web"
 app = FastAPI(title="大学生学习助手", version="0.1.0")
 repository = CourseRepository()
 document_repository = DocumentRepository()
+retrieval_repository = RetrievalRepository()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -110,3 +116,16 @@ def delete_document(course_id: int, document_id: int) -> Response:
     except DocumentNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.get("/api/courses/{course_id}/search")
+def search_course(course_id: int, q: str, limit: int = 10) -> list[dict[str, object]]:
+    try:
+        return [
+            result.to_dict()
+            for result in retrieval_repository.search(course_id, q, limit)
+        ]
+    except SearchCourseNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except SearchValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error

@@ -51,4 +51,46 @@ def initialize(path: Path | None = None) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                document_id INTEGER NOT NULL,
+                course_id INTEGER NOT NULL,
+                section_title TEXT NOT NULL DEFAULT '',
+                sequence INTEGER NOT NULL,
+                content TEXT NOT NULL CHECK(length(trim(content)) > 0),
+                FOREIGN KEY (document_id) REFERENCES source_documents(id) ON DELETE CASCADE,
+                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+                UNIQUE(document_id, sequence)
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS chunk_search USING fts5(
+                chunk_id UNINDEXED,
+                course_id UNINDEXED,
+                content,
+                tokenize='trigram'
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS chunks_after_insert
+            AFTER INSERT ON chunks BEGIN
+                INSERT INTO chunk_search (chunk_id, course_id, content)
+                VALUES (new.id, new.course_id, new.content);
+            END
+            """
+        )
+        connection.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS chunks_after_delete
+            AFTER DELETE ON chunks BEGIN
+                DELETE FROM chunk_search WHERE chunk_id = old.id;
+            END
+            """
+        )
         connection.commit()

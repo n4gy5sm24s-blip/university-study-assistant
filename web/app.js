@@ -9,6 +9,10 @@ const documentFile = document.querySelector("#document-file");
 const documentList = document.querySelector("#document-list");
 const documentMessage = document.querySelector("#document-message");
 const closeMaterials = document.querySelector("#close-materials");
+const searchForm = document.querySelector("#search-form");
+const searchQuery = document.querySelector("#search-query");
+const searchMessage = document.querySelector("#search-message");
+const searchResults = document.querySelector("#search-results");
 let selectedCourse = null;
 
 function escapeHtml(value) {
@@ -133,10 +137,42 @@ documentList.addEventListener("click", async event => {
   await loadDocuments();
 });
 
+searchForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!selectedCourse) return;
+  searchMessage.textContent = "正在搜索……";
+  searchResults.innerHTML = "";
+  const response = await fetch(
+    `/api/courses/${selectedCourse}/search?q=${encodeURIComponent(searchQuery.value)}`
+  );
+  const results = await response.json();
+  if (!response.ok) {
+    searchMessage.textContent = results.detail || "搜索失败";
+    return;
+  }
+  if (!results.length) {
+    searchMessage.textContent = "这门课程的资料中没有找到相关内容。";
+    return;
+  }
+  searchMessage.textContent = `找到 ${results.length} 条相关片段`;
+  searchResults.innerHTML = results.map(result => `
+    <article class="document-row">
+      <div>
+        <strong>${escapeHtml(result.filename)}${result.section_title ? ` · ${escapeHtml(result.section_title)}` : ""}</strong>
+        <p>${escapeHtml(result.content)}</p>
+        <div class="document-meta">片段 ${result.sequence + 1}</div>
+      </div>
+    </article>
+  `).join("");
+});
+
 closeMaterials.addEventListener("click", () => {
   materialsPanel.classList.add("hidden");
   selectedCourse = null;
   documentMessage.textContent = "";
+  searchForm.reset();
+  searchMessage.textContent = "";
+  searchResults.innerHTML = "";
 });
 
 refresh.addEventListener("click", loadCourses);
