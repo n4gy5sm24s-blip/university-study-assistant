@@ -14,7 +14,12 @@ SYSTEM_INSTRUCTIONS = """你是大学课程学习助手。只能依据用户消�
 class AnswerGenerator(Protocol):
     method_name: str
 
-    def generate(self, question: str, evidence: list[str]) -> str: ...
+    def generate(
+        self,
+        question: str,
+        evidence: list[str],
+        task_instructions: str = "",
+    ) -> str: ...
 
 
 class GenerationError(RuntimeError):
@@ -32,14 +37,23 @@ class OpenAIResponsesGenerator:
         self.model = model
         self.client = OpenAI(api_key=api_key, timeout=30.0)
 
-    def generate(self, question: str, evidence: list[str]) -> str:
+    def generate(
+        self,
+        question: str,
+        evidence: list[str],
+        task_instructions: str = "",
+    ) -> str:
         context = "\n\n".join(
             f"[{index}] {text}" for index, text in enumerate(evidence, 1)
         )
         response = self.client.responses.create(
             model=self.model,
             instructions=SYSTEM_INSTRUCTIONS,
-            input=f"问题：{question}\n\n课程资料：\n{context}",
+            input=(
+                f"问题：{question}\n\n"
+                f"本次任务要求：{task_instructions or '直接回答问题'}\n\n"
+                f"课程资料：\n{context}"
+            ),
             store=False,
         )
         answer = response.output_text.strip()

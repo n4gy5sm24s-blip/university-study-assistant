@@ -48,7 +48,7 @@ h1 {
 form { display: grid; gap: 18px; }
 label { display: grid; gap: 8px; font-weight: 700; }
 
-input, textarea {
+input, textarea, select {
   width: 100%;
   border: 1px solid #bdc9be;
   border-radius: 10px;
@@ -94,6 +94,7 @@ button.danger { color: #8a3029; background: #f8e3df; }
 #form-message { min-height: 1.5em; color: #2f6b4f; }
 #document-message { min-height: 1.5em; color: #2f6b4f; }
 #search-message, #question-message { min-height: 1.5em; color: #2f6b4f; }
+#homework-message { min-height: 1.5em; color: #2f6b4f; }
 .hidden { display: none; }
 .document-list { margin-top: 20px; display: grid; gap: 10px; }
 .document-row {

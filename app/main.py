@@ -17,6 +17,7 @@ from .documents import (
     DocumentValidationError,
     DuplicateDocumentError,
 )
+from .homework import HomeworkService, HomeworkValidationError
 from .retrieval import (
     RetrievalRepository,
     SearchCourseNotFoundError,
@@ -33,6 +34,7 @@ repository = CourseRepository()
 document_repository = DocumentRepository()
 retrieval_repository = RetrievalRepository()
 answer_service = GroundedAnswerService()
+homework_service = HomeworkService()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -49,6 +51,12 @@ class DocumentCreate(BaseModel):
 
 class QuestionCreate(BaseModel):
     question: str = Field(min_length=3, max_length=2000)
+
+
+class HomeworkCreate(BaseModel):
+    question: str = Field(min_length=3, max_length=5000)
+    mode: str = Field(default="hint", max_length=20)
+    student_attempt: str = Field(default="", max_length=10000)
 
 
 @app.get("/", include_in_schema=False)
@@ -146,4 +154,19 @@ def ask_course(course_id: int, payload: QuestionCreate) -> dict[str, object]:
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (QuestionValidationError, SearchValidationError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/courses/{course_id}/homework-guidance")
+def guide_homework(course_id: int, payload: HomeworkCreate) -> dict[str, object]:
+    try:
+        return homework_service.guide(
+            course_id,
+            payload.question,
+            payload.mode,
+            payload.student_attempt,
+        ).to_dict()
+    except SearchCourseNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (HomeworkValidationError, SearchValidationError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

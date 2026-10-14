@@ -17,6 +17,12 @@ const questionForm = document.querySelector("#question-form");
 const questionInput = document.querySelector("#question-input");
 const questionMessage = document.querySelector("#question-message");
 const answerCard = document.querySelector("#answer-card");
+const homeworkForm = document.querySelector("#homework-form");
+const homeworkMode = document.querySelector("#homework-mode");
+const homeworkQuestion = document.querySelector("#homework-question");
+const studentAttempt = document.querySelector("#student-attempt");
+const homeworkMessage = document.querySelector("#homework-message");
+const homeworkCard = document.querySelector("#homework-card");
 let selectedCourse = null;
 
 function escapeHtml(value) {
@@ -200,6 +206,39 @@ questionForm.addEventListener("submit", async event => {
   answerCard.classList.remove("hidden");
 });
 
+homeworkForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!selectedCourse) return;
+  homeworkMessage.textContent = "正在课程资料中寻找作业依据……";
+  homeworkCard.classList.add("hidden");
+  const response = await fetch(`/api/courses/${selectedCourse}/homework-guidance`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      question: homeworkQuestion.value,
+      mode: homeworkMode.value,
+      student_attempt: studentAttempt.value
+    })
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    homeworkMessage.textContent = result.detail || "辅导请求失败";
+    return;
+  }
+  homeworkMessage.textContent = result.grounding_status === "grounded"
+    ? "已根据课程资料生成辅导"
+    : "课程资料依据不足";
+  const citations = result.citations.map(citation => `
+    <li><strong>[${citation.number}] ${escapeHtml(citation.filename)}</strong>${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""} · 片段 ${citation.sequence + 1}</li>
+  `).join("");
+  homeworkCard.innerHTML = `
+    <h3>辅导建议</h3>
+    <p>${escapeHtml(result.guidance).replaceAll("\n", "<br>")}</p>
+    ${citations ? `<h4>课程依据</h4><ol>${citations}</ol>` : ""}
+  `;
+  homeworkCard.classList.remove("hidden");
+});
+
 closeMaterials.addEventListener("click", () => {
   materialsPanel.classList.add("hidden");
   selectedCourse = null;
@@ -211,6 +250,10 @@ closeMaterials.addEventListener("click", () => {
   questionMessage.textContent = "";
   answerCard.innerHTML = "";
   answerCard.classList.add("hidden");
+  homeworkForm.reset();
+  homeworkMessage.textContent = "";
+  homeworkCard.innerHTML = "";
+  homeworkCard.classList.add("hidden");
 });
 
 refresh.addEventListener("click", loadCourses);

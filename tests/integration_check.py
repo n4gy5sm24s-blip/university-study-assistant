@@ -14,6 +14,7 @@ os.environ["STUDY_ASSISTANT_DB"] = str(CHECK_ROOT / "integration.db")
 from app.main import (  # noqa: E402
     CourseCreate,
     DocumentCreate,
+    HomeworkCreate,
     QuestionCreate,
     ask_course,
     create_course,
@@ -21,6 +22,7 @@ from app.main import (  # noqa: E402
     delete_course,
     delete_document,
     health,
+    guide_homework,
     list_courses,
     list_documents,
     search_course,
@@ -59,13 +61,23 @@ def main() -> None:
         )
         assert missing["grounding_status"] == "no_evidence"
         assert missing["citations"] == []
+        homework = guide_homework(
+            int(course["id"]),
+            HomeworkCreate(
+                question="请分析虚构内容在案例中的作用",
+                mode="hint",
+            ),
+        )
+        assert homework["grounding_status"] == "grounded"
+        assert homework["mode"] == "hint"
+        assert homework["citations"][0]["filename"] == "demo.md"
 
         delete_document(int(course["id"]), int(document["id"]))
         assert list_documents(int(course["id"])) == []
         assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: upload, retrieval, grounded answer, citation, and deletion")
+        print("INTEGRATION OK: upload, Q&A, homework guidance, citations, and deletion")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

@@ -74,6 +74,29 @@
           <p id="question-message" role="status"></p>
         </form>
         <article id="answer-card" class="answer-card hidden"></article>
+        <hr />
+        <form id="homework-form">
+          <h3>作业辅导</h3>
+          <label>
+            我需要哪种帮助
+            <select id="homework-mode">
+              <option value="hint">只提示方向和第一步</option>
+              <option value="steps">分步讲解</option>
+              <option value="review">检查我的尝试</option>
+            </select>
+          </label>
+          <label>
+            作业题目
+            <textarea id="homework-question" minlength="3" required placeholder="粘贴题目，但不要包含姓名、学号等隐私信息"></textarea>
+          </label>
+          <label>
+            我的尝试（检查模式必填）
+            <textarea id="student-attempt" placeholder="写下你已经想到或完成的内容"></textarea>
+          </label>
+          <button type="submit">获取辅导</button>
+          <p id="homework-message" role="status"></p>
+        </form>
+        <article id="homework-card" class="answer-card hidden"></article>
       </section>
     </main>
     <script src="/static/app.js"></script>
