@@ -23,6 +23,12 @@ const homeworkQuestion = document.querySelector("#homework-question");
 const studentAttempt = document.querySelector("#student-attempt");
 const homeworkMessage = document.querySelector("#homework-message");
 const homeworkCard = document.querySelector("#homework-card");
+const reviewForm = document.querySelector("#review-form");
+const reviewScope = document.querySelector("#review-scope");
+const reviewHours = document.querySelector("#review-hours");
+const weakTopics = document.querySelector("#weak-topics");
+const reviewMessage = document.querySelector("#review-message");
+const reviewCard = document.querySelector("#review-card");
 let selectedCourse = null;
 
 function escapeHtml(value) {
@@ -239,6 +245,45 @@ homeworkForm.addEventListener("submit", async event => {
   homeworkCard.classList.remove("hidden");
 });
 
+reviewForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!selectedCourse) return;
+  reviewMessage.textContent = "正在根据课程资料安排复习……";
+  reviewCard.classList.add("hidden");
+  const response = await fetch(`/api/courses/${selectedCourse}/review-plans`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      scope: reviewScope.value,
+      available_hours: Number(reviewHours.value),
+      weak_topics: weakTopics.value
+    })
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    reviewMessage.textContent = result.detail || "计划生成失败";
+    return;
+  }
+  if (result.status !== "ready") {
+    reviewMessage.textContent = result.overview;
+    return;
+  }
+  reviewMessage.textContent = `已安排 ${result.total_minutes} 分钟`;
+  const blocks = result.blocks.map(block => `
+    <li><strong>${block.minutes} 分钟 · ${escapeHtml(block.topic)}</strong><br>${escapeHtml(block.activity)}${block.citation_number ? ` [${block.citation_number}]` : ""}</li>
+  `).join("");
+  const tests = result.self_test.map(question => `<li>${escapeHtml(question)}</li>`).join("");
+  const assumptions = result.assumptions.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+  reviewCard.innerHTML = `
+    <h3>紧急复习计划</h3>
+    <p>${escapeHtml(result.overview)}</p>
+    <ol>${blocks}</ol>
+    <h4>闭卷自测</h4><ul>${tests}</ul>
+    <h4>计划依据与限制</h4><ul>${assumptions}</ul>
+  `;
+  reviewCard.classList.remove("hidden");
+});
+
 closeMaterials.addEventListener("click", () => {
   materialsPanel.classList.add("hidden");
   selectedCourse = null;
@@ -254,6 +299,10 @@ closeMaterials.addEventListener("click", () => {
   homeworkMessage.textContent = "";
   homeworkCard.innerHTML = "";
   homeworkCard.classList.add("hidden");
+  reviewForm.reset();
+  reviewMessage.textContent = "";
+  reviewCard.innerHTML = "";
+  reviewCard.classList.add("hidden");
 });
 
 refresh.addEventListener("click", loadCourses);

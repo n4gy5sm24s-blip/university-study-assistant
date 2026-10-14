@@ -23,6 +23,7 @@ from .retrieval import (
     SearchCourseNotFoundError,
     SearchValidationError,
 )
+from .review import ReviewPlanService, ReviewValidationError
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -35,6 +36,7 @@ document_repository = DocumentRepository()
 retrieval_repository = RetrievalRepository()
 answer_service = GroundedAnswerService()
 homework_service = HomeworkService()
+review_service = ReviewPlanService()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -57,6 +59,12 @@ class HomeworkCreate(BaseModel):
     question: str = Field(min_length=3, max_length=5000)
     mode: str = Field(default="hint", max_length=20)
     student_attempt: str = Field(default="", max_length=10000)
+
+
+class ReviewPlanCreate(BaseModel):
+    scope: str = Field(default="全部已上传资料", max_length=1000)
+    available_hours: float = Field(ge=0.5, le=168)
+    weak_topics: str = Field(default="", max_length=1000)
 
 
 @app.get("/", include_in_schema=False)
@@ -169,4 +177,21 @@ def guide_homework(course_id: int, payload: HomeworkCreate) -> dict[str, object]
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (HomeworkValidationError, SearchValidationError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/courses/{course_id}/review-plans")
+def create_review_plan(
+    course_id: int, payload: ReviewPlanCreate
+) -> dict[str, object]:
+    try:
+        return review_service.create_plan(
+            course_id,
+            payload.scope,
+            payload.available_hours,
+            payload.weak_topics,
+        ).to_dict()
+    except SearchCourseNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ReviewValidationError, SearchValidationError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

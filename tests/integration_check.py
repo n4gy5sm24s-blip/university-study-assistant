@@ -16,9 +16,11 @@ from app.main import (  # noqa: E402
     DocumentCreate,
     HomeworkCreate,
     QuestionCreate,
+    ReviewPlanCreate,
     ask_course,
     create_course,
     create_document,
+    create_review_plan,
     delete_course,
     delete_document,
     health,
@@ -71,13 +73,20 @@ def main() -> None:
         assert homework["grounding_status"] == "grounded"
         assert homework["mode"] == "hint"
         assert homework["citations"][0]["filename"] == "demo.md"
+        review_plan = create_review_plan(
+            int(course["id"]),
+            ReviewPlanCreate(scope="全部内容", available_hours=1),
+        )
+        assert review_plan["status"] == "ready"
+        assert review_plan["total_minutes"] == 60
+        assert sum(block["minutes"] for block in review_plan["blocks"]) == 60
 
         delete_document(int(course["id"]), int(document["id"]))
         assert list_documents(int(course["id"])) == []
         assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: upload, Q&A, homework guidance, citations, and deletion")
+        print("INTEGRATION OK: upload, Q&A, homework, review plan, citations, deletion")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

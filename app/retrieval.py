@@ -181,4 +181,26 @@ class RetrievalRepository:
             ).fetchall()
         return [SearchResult(**dict(row)) for row in rows]
 
+    def list_course_chunks(self, course_id: int, limit: int = 50) -> list[SearchResult]:
+        safe_limit = max(1, min(limit, 100))
+        with connect(self.database) as connection:
+            course = connection.execute(
+                "SELECT id FROM courses WHERE id = ?", (course_id,)
+            ).fetchone()
+            if course is None:
+                raise SearchCourseNotFoundError(f"课程 {course_id} 不存在")
+            rows = connection.execute(
+                """
+                SELECT c.id AS chunk_id, c.document_id, d.filename,
+                       c.section_title, c.sequence, c.content, 0.0 AS score
+                FROM chunks c
+                JOIN source_documents d ON d.id = c.document_id
+                WHERE c.course_id = ?
+                ORDER BY d.id, c.sequence
+                LIMIT ?
+                """,
+                (course_id, safe_limit),
+            ).fetchall()
+        return [SearchResult(**dict(row)) for row in rows]
+
 

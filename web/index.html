@@ -97,6 +97,25 @@
           <p id="homework-message" role="status"></p>
         </form>
         <article id="homework-card" class="answer-card hidden"></article>
+        <hr />
+        <form id="review-form">
+          <h3>紧急复习计划</h3>
+          <label>
+            考试范围
+            <input id="review-scope" value="全部内容" required placeholder="例如：竞争战略与团队管理" />
+          </label>
+          <label>
+            可用时间（小时）
+            <input id="review-hours" type="number" min="0.5" max="168" step="0.5" value="3" required />
+          </label>
+          <label>
+            特别薄弱的主题（可选）
+            <input id="weak-topics" placeholder="例如：心理安全" />
+          </label>
+          <button type="submit">生成复习计划</button>
+          <p id="review-message" role="status"></p>
+        </form>
+        <article id="review-card" class="answer-card hidden"></article>
       </section>
     </main>
     <script src="/static/app.js"></script>

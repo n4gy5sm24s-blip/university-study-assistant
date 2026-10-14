@@ -95,6 +95,7 @@ button.danger { color: #8a3029; background: #f8e3df; }
 #document-message { min-height: 1.5em; color: #2f6b4f; }
 #search-message, #question-message { min-height: 1.5em; color: #2f6b4f; }
 #homework-message { min-height: 1.5em; color: #2f6b4f; }
+#review-message { min-height: 1.5em; color: #2f6b4f; }
 .hidden { display: none; }
 .document-list { margin-top: 20px; display: grid; gap: 10px; }
 .document-row {
@@ -116,4 +117,5 @@ button.danger { color: #8a3029; background: #f8e3df; }
 }
 .answer-card h3, .answer-card h4 { margin-top: 0; }
 .answer-card ol { padding-left: 24px; }
+.answer-card li { margin-bottom: 10px; }
 hr { margin: 28px 0; border: 0; border-top: 1px solid #dbe3d8; }
