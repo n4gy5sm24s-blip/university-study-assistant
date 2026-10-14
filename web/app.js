@@ -195,7 +195,7 @@ questionForm.addEventListener("submit", async event => {
     <h3>回答</h3>
     <p>${escapeHtml(result.answer).replaceAll("\n", "<br>")}</p>
     ${citations ? `<h4>资料来源</h4><ol>${citations}</ol>` : ""}
-    <div class="document-meta">生成方式：${result.generation_method === "extractive" ? "原文依据整理" : "未生成"}</div>
+    <div class="document-meta">生成方式：${result.generation_method === "openai_responses" ? "生成模型讲解" : result.generation_method === "extractive_fallback" ? "模型不可用，已退回原文依据" : result.generation_method === "extractive" ? "原文依据整理" : "未生成"}</div>
   `;
   answerCard.classList.remove("hidden");
 });

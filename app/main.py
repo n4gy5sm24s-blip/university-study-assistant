@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from .answers import GroundedAnswerService, QuestionValidationError
@@ -25,6 +26,7 @@ from .retrieval import (
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 WEB_DIR = BASE_DIR / "web"
+load_dotenv(BASE_DIR / ".env")
 
 app = FastAPI(title="大学生学习助手", version="0.1.0")
 repository = CourseRepository()

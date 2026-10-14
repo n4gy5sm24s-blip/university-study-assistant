@@ -8,6 +8,20 @@ from app.courses import CourseRepository
 from app.documents import DocumentRepository
 
 
+class FakeGenerator:
+    method_name = "fake_generator"
+
+    def generate(self, question: str, evidence: list[str]) -> str:
+        return f"机会成本是放弃的最佳替代选择。[1]"
+
+
+class FailingGenerator:
+    method_name = "failing_generator"
+
+    def generate(self, question: str, evidence: list[str]) -> str:
+        raise RuntimeError("temporary failure")
+
+
 class GroundedAnswerServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).parent / ".tmp" / uuid4().hex
@@ -15,7 +29,9 @@ class GroundedAnswerServiceTests(unittest.TestCase):
         self.database = self.root / "test.db"
         self.courses = CourseRepository(self.database)
         self.documents = DocumentRepository(self.database, self.root / "uploads")
-        self.answers = GroundedAnswerService(self.database)
+        self.answers = GroundedAnswerService(
+            self.database, use_environment_generator=False
+        )
 
     def tearDown(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -49,6 +65,31 @@ class GroundedAnswerServiceTests(unittest.TestCase):
         self.documents.create(second.id, "private.txt", "波特五力用于分析行业竞争结构。")
         result = self.answers.answer(first.id, "什么是波特五力？")
         self.assertEqual(result.grounding_status, "no_evidence")
+
+    def test_configured_generator_uses_retrieved_evidence(self) -> None:
+        course = self.courses.create("经济学")
+        self.documents.create(course.id, "lesson.txt", "机会成本是放弃的最佳替代选择。")
+        service = GroundedAnswerService(
+            self.database,
+            generator=FakeGenerator(),
+            use_environment_generator=False,
+        )
+        result = service.answer(course.id, "什么是机会成本？")
+        self.assertEqual(result.generation_method, "fake_generator")
+        self.assertIn("[1]", result.answer)
+        self.assertEqual(len(result.citations), 1)
+
+    def test_generator_failure_falls_back_to_extractive_answer(self) -> None:
+        course = self.courses.create("经济学")
+        self.documents.create(course.id, "lesson.txt", "机会成本是放弃的最佳替代选择。")
+        service = GroundedAnswerService(
+            self.database,
+            generator=FailingGenerator(),
+            use_environment_generator=False,
+        )
+        result = service.answer(course.id, "什么是机会成本？")
+        self.assertEqual(result.generation_method, "extractive_fallback")
+        self.assertEqual(result.grounding_status, "grounded")
 
 
 if __name__ == "__main__":

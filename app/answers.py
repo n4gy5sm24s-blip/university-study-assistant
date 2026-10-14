@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .generation import AnswerGenerator, generator_from_environment
 from .retrieval import RetrievalRepository, SearchResult
 
 
@@ -39,8 +40,18 @@ class QuestionValidationError(ValueError):
 
 
 class GroundedAnswerService:
-    def __init__(self, database: Path | None = None) -> None:
+    def __init__(
+        self,
+        database: Path | None = None,
+        generator: AnswerGenerator | None = None,
+        use_environment_generator: bool = True,
+    ) -> None:
         self.retrieval = RetrievalRepository(database)
+        self.generator = (
+            generator_from_environment()
+            if generator is None and use_environment_generator
+            else generator
+        )
 
     def answer(self, course_id: int, question: str) -> GroundedAnswer:
         clean_question = question.strip()
@@ -60,11 +71,29 @@ class GroundedAnswerService:
         evidence = "\n\n".join(
             f"[{citation.number}] {citation.excerpt}" for citation in citations
         )
+        generation_failed = False
+        if self.generator is not None:
+            try:
+                generated = self.generator.generate(
+                    clean_question,
+                    [citation.excerpt for citation in citations],
+                )
+                return GroundedAnswer(
+                    question=clean_question,
+                    answer=generated,
+                    grounding_status="grounded",
+                    generation_method=self.generator.method_name,
+                    citations=citations,
+                )
+            except Exception:
+                generation_failed = True
         return GroundedAnswer(
             question=clean_question,
             answer=f"根据当前课程资料，找到以下直接相关内容：\n\n{evidence}",
             grounding_status="grounded",
-            generation_method="extractive",
+            generation_method=(
+                "extractive_fallback" if generation_failed else "extractive"
+            ),
             citations=citations,
         )
 
