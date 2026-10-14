@@ -1,0 +1,22 @@
+[
+  {"id":"grounded-01","question":"什么是机会成本？","expected":"grounded","section":"机会成本","keyword":"最佳替代选择"},
+  {"id":"grounded-02","question":"竞争优势通常来自哪些方面？","expected":"grounded","section":"竞争优势","keyword":"成本领先"},
+  {"id":"grounded-03","question":"请解释波特五力","expected":"grounded","section":"波特五力","keyword":"供应商议价能力"},
+  {"id":"grounded-04","question":"目标管理怎样检查结果？","expected":"grounded","section":"目标管理","keyword":"可衡量"},
+  {"id":"grounded-05","question":"什么是团队心理安全？","expected":"grounded","section":"心理安全","keyword":"承认错误"},
+  {"id":"grounded-06","question":"组织文化会影响什么？","expected":"grounded","section":"组织文化","keyword":"日常决定"},
+  {"id":"grounded-07","question":"授权管理需要把什么交给员工？","expected":"grounded","section":"授权管理","keyword":"相应权限"},
+  {"id":"grounded-08","question":"变革阻力可能来自哪里？","expected":"grounded","section":"变革阻力","keyword":"不确定感"},
+  {"id":"grounded-09","question":"激励因素影响努力的哪些方面？","expected":"grounded","section":"激励因素","keyword":"持续时间"},
+  {"id":"grounded-10","question":"团队规范有什么作用？","expected":"grounded","section":"团队规范","keyword":"共同预期"},
+  {"id":"grounded-11","question":"确认偏差会让人怎么处理信息？","expected":"grounded","section":"决策偏差","keyword":"相反证据"},
+  {"id":"grounded-12","question":"利益相关者包括哪些群体？","expected":"grounded","section":"利益相关者","keyword":"供应商"},
+  {"id":"refusal-01","question":"什么是量子纠缠？","expected":"no_evidence"},
+  {"id":"refusal-02","question":"光合作用的化学方程式是什么？","expected":"no_evidence"},
+  {"id":"refusal-03","question":"请推导牛顿第二定律","expected":"no_evidence"},
+  {"id":"refusal-04","question":"脱氧核糖核酸如何复制？","expected":"no_evidence"},
+  {"id":"refusal-05","question":"传输控制协议怎样完成握手？","expected":"no_evidence"},
+  {"id":"refusal-06","question":"法国大革命发生在哪一年？","expected":"no_evidence"},
+  {"id":"refusal-07","question":"如何计算圆锥体积？","expected":"no_evidence"},
+  {"id":"refusal-08","question":"解释恒星核聚变过程","expected":"no_evidence"}
+]
