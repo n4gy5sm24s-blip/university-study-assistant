@@ -56,9 +56,10 @@ class QuestionCreate(BaseModel):
 
 
 class HomeworkCreate(BaseModel):
-    question: str = Field(min_length=3, max_length=5000)
+    question: str = Field(default="", max_length=5000)
     mode: str = Field(default="draft", max_length=20)
     student_attempt: str = Field(default="", max_length=10000)
+    image_data_url: str = Field(default="", max_length=8_000_000)
 
 
 class ReviewPlanCreate(BaseModel):
@@ -173,6 +174,7 @@ def guide_homework(course_id: int, payload: HomeworkCreate) -> dict[str, object]
             payload.question,
             payload.mode,
             payload.student_attempt,
+            payload.image_data_url,
         ).to_dict()
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

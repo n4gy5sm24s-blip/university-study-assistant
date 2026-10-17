@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
-const state = { courses: [], selectedCourse: null, mode: "draft", busy: false };
+const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null };
 const modeCopy = {
   draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
@@ -64,6 +64,8 @@ function setMode(mode) {
   $("#composer-input").placeholder = modeCopy[mode].placeholder;
   $("#composer-hint").textContent = modeCopy[mode].hint;
   $("#attempt-input").classList.toggle("hidden", mode !== "review");
+  $("#attach-button").classList.toggle("hidden", mode === "ask");
+  if (mode === "ask") clearHomeworkImage();
   if (mode !== "review") $("#attempt-input").value = "";
   $("#composer-input").focus();
 }
@@ -91,7 +93,7 @@ function addMessage(role, content, citations = [], meta = "") {
 async function submitPrompt() {
   const prompt = $("#composer-input").value.trim();
   const attempt = $("#attempt-input").value.trim();
-  if (!prompt || state.busy) return;
+  if ((!prompt && !state.homeworkImage) || state.busy) return;
   if (!state.selectedCourse) {
     $("#composer-status").textContent = "请先在左侧创建或选择一门课程。";
     return;
@@ -100,9 +102,13 @@ async function submitPrompt() {
     $("#composer-status").textContent = "检查答案模式需要粘贴你已经写好的内容。";
     return;
   }
-  addMessage("user", state.mode === "review" ? `${prompt}\n\n我的答案：\n${attempt}` : prompt, [], modeCopy[state.mode].label);
+  const displayedPrompt = prompt || "请完成图片中的作业题";
+  const imageNote = state.homeworkImage ? `\n\n📷 已上传题目图片：${state.homeworkImage.name}` : "";
+  addMessage("user", (state.mode === "review" ? `${displayedPrompt}\n\n我的答案：\n${attempt}` : displayedPrompt) + imageNote, [], modeCopy[state.mode].label);
+  const imageDataUrl = state.homeworkImage?.dataUrl || "";
   $("#composer-input").value = "";
   $("#attempt-input").value = "";
+  clearHomeworkImage();
   state.busy = true;
   $("#send-button").disabled = true;
   $("#composer-status").textContent = state.mode === "draft" ? "正在检索资料并起草作业…" : "正在检索课程资料…";
@@ -116,7 +122,7 @@ async function submitPrompt() {
     } else {
       result = await api(`/api/courses/${state.selectedCourse.id}/homework-guidance`, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({question: prompt, mode: state.mode, student_attempt: attempt})
+        body: JSON.stringify({question: prompt, mode: state.mode, student_attempt: attempt, image_data_url: imageDataUrl})
       });
       addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method));
     }
@@ -182,6 +188,38 @@ $("#composer-input").addEventListener("input", event => {
   event.target.style.height = "auto";
   event.target.style.height = `${Math.min(event.target.scrollHeight, 190)}px`;
 });
+
+function clearHomeworkImage() {
+  state.homeworkImage = null;
+  $("#homework-image").value = "";
+  $("#image-preview-thumb").removeAttribute("src");
+  $("#image-preview").classList.add("hidden");
+}
+
+$("#homework-image").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    $("#composer-status").textContent = "题目图片只支持 JPG、PNG 或 WebP。";
+    clearHomeworkImage();
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    $("#composer-status").textContent = "题目图片不能超过 5MB。";
+    clearHomeworkImage();
+    return;
+  }
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    state.homeworkImage = {name: file.name, dataUrl: reader.result};
+    $("#image-preview-thumb").src = reader.result;
+    $("#image-preview-name").textContent = file.name;
+    $("#image-preview").classList.remove("hidden");
+    $("#composer-status").textContent = "";
+  });
+  reader.readAsDataURL(file);
+});
+$("#image-remove").addEventListener("click", clearHomeworkImage);
 
 $("#materials-open").addEventListener("click", async () => { $("#materials-dialog").showModal(); await loadDocuments(); });
 $("#document-form").addEventListener("submit", async event => {

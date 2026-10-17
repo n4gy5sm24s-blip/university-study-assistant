@@ -61,6 +61,27 @@ class OpenAIResponsesGenerator:
             raise GenerationError("模型没有返回文字")
         return answer
 
+    def read_image(self, image_data_url: str) -> str:
+        response = self.client.responses.create(
+            model=self.model,
+            instructions=(
+                "读取图片中的大学作业题目，准确转写全部可见题干、选项、公式和表格。"
+                "只输出转写结果，不解题；看不清的部分标记为[无法辨认]。"
+            ),
+            input=[{
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "请转写这张作业题图片。"},
+                    {"type": "input_image", "image_url": image_data_url},
+                ],
+            }],
+            store=False,
+        )
+        text = response.output_text.strip()
+        if not text:
+            raise GenerationError("没有从图片中识别出题目")
+        return text
+
 
 def generator_from_environment() -> AnswerGenerator | None:
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()

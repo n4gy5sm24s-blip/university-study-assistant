@@ -43,10 +43,19 @@
             <button class="mode-tab" data-mode="review" type="button">检查答案</button>
           </div>
           <form class="composer" id="composer-form">
-            <textarea id="composer-input" rows="1" placeholder="粘贴作业题目，按 Enter 发送…" required></textarea>
+            <textarea id="composer-input" rows="1" placeholder="粘贴作业题目，按 Enter 发送…"></textarea>
             <textarea id="attempt-input" class="attempt-input hidden" rows="2" placeholder="粘贴你已经写好的答案…"></textarea>
+            <div class="image-preview hidden" id="image-preview">
+              <img id="image-preview-thumb" alt="待发送的作业题图片" />
+              <div><strong id="image-preview-name"></strong><span>将和题目一起发送</span></div>
+              <button id="image-remove" type="button" aria-label="移除图片">×</button>
+            </div>
             <div class="composer-bottom">
-              <span id="composer-hint">将根据当前课程资料生成作业草稿</span>
+              <div class="composer-tools">
+                <label class="attach-button" id="attach-button" for="homework-image" title="上传题目照片" aria-label="上传题目照片">＋</label>
+                <input id="homework-image" class="file-input" type="file" accept="image/jpeg,image/png,image/webp" />
+                <span id="composer-hint">将根据当前课程资料生成作业草稿</span>
+              </div>
               <button class="send-button" id="send-button" type="submit" aria-label="发送">↑</button>
             </div>
           </form>

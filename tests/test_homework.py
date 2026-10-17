@@ -22,6 +22,9 @@ class CapturingGenerator:
         self.task_instructions = task_instructions
         return "先说明心理安全的含义，再分析案例中的发言环境。[1]"
 
+    def read_image(self, image_data_url: str) -> str:
+        return "请分析心理安全如何影响团队合作"
+
 
 class HomeworkServiceTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -59,6 +62,31 @@ class HomeworkServiceTests(unittest.TestCase):
         self.assertEqual(result.grounding_status, "grounded")
         self.assertIn("作业草稿", result.guidance)
         self.assertEqual(result.citations[0].section_title, "心理安全")
+
+    def test_homework_image_is_read_before_retrieval(self) -> None:
+        generator = CapturingGenerator()
+        service = HomeworkService(
+            self.database,
+            generator=generator,
+            use_environment_generator=False,
+        )
+        result = service.guide(
+            self.course.id,
+            "",
+            image_data_url="data:image/png;base64,ZmFrZQ==",
+        )
+        self.assertEqual(result.grounding_status, "grounded")
+        self.assertIn("图片中的题目", result.question)
+        self.assertIn("心理安全", generator.question)
+
+    def test_homework_image_requires_image_capable_model(self) -> None:
+        service = HomeworkService(self.database, use_environment_generator=False)
+        with self.assertRaises(HomeworkValidationError):
+            service.guide(
+                self.course.id,
+                "",
+                image_data_url="data:image/png;base64,ZmFrZQ==",
+            )
 
     def test_review_mode_requires_student_attempt(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)

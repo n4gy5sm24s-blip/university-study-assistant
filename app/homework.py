@@ -55,9 +55,21 @@ class HomeworkService:
         question: str,
         mode: str = "draft",
         student_attempt: str = "",
+        image_data_url: str = "",
     ) -> HomeworkGuidance:
         clean_question = question.strip()
         clean_attempt = student_attempt.strip()
+        clean_image = image_data_url.strip()
+        if clean_image:
+            if not clean_image.startswith(("data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,")):
+                raise HomeworkValidationError("题目图片只支持 JPG、PNG 或 WebP")
+            if self.generator is None or not hasattr(self.generator, "read_image"):
+                raise HomeworkValidationError("读取题目图片需要先配置支持图片的生成模型")
+            try:
+                image_question = self.generator.read_image(clean_image)
+            except Exception as error:
+                raise HomeworkValidationError("没有成功读取题目图片，请换一张更清晰的图片") from error
+            clean_question = f"{clean_question}\n\n图片中的题目：\n{image_question}".strip()
         if len(clean_question) < 3:
             raise HomeworkValidationError("作业题目至少需要 3 个字符")
         if mode not in GUIDANCE_INSTRUCTIONS:
