@@ -183,12 +183,6 @@ $("#composer-input").addEventListener("input", event => {
   event.target.style.height = `${Math.min(event.target.scrollHeight, 190)}px`;
 });
 
-$$("[data-suggestion]").forEach(button => button.addEventListener("click", () => {
-  if (button.dataset.modeSuggestion) setMode(button.dataset.modeSuggestion);
-  $("#composer-input").value = button.dataset.suggestion;
-  $("#composer-input").focus();
-}));
-
 $("#materials-open").addEventListener("click", async () => { $("#materials-dialog").showModal(); await loadDocuments(); });
 $("#document-form").addEventListener("submit", async event => {
   event.preventDefault();
