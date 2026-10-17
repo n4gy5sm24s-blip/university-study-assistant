@@ -9,6 +9,7 @@ from .retrieval import RetrievalRepository, SearchResult
 
 
 GUIDANCE_INSTRUCTIONS = {
+    "draft": "根据课程资料生成一份完整、可编辑的作业草稿。直接回应题目，给出清晰结构和论证，并用 [n] 标注依据。明确资料没有支持的假设，不伪造事实或引用。",
     "hint": "只给解题方向、相关概念和第一步，不直接给出可提交的完整答案。",
     "steps": "把思考过程拆成清楚步骤，解释每一步应做什么，但提醒学生按自己的课程要求完成表达。",
     "review": "检查学生已有尝试：指出正确之处、遗漏、逻辑问题和下一步修改建议，不冒充学生重写整份作业。",
@@ -52,7 +53,7 @@ class HomeworkService:
         self,
         course_id: int,
         question: str,
-        mode: str = "hint",
+        mode: str = "draft",
         student_attempt: str = "",
     ) -> HomeworkGuidance:
         clean_question = question.strip()
@@ -122,6 +123,13 @@ class HomeworkService:
     @staticmethod
     def _local_guidance(mode: str, citations: list[Citation]) -> str:
         first = citations[0]
+        if mode == "draft":
+            return (
+                "当前没有启用生成模型，因此无法可靠生成完整作业草稿。"
+                "你可以先根据下面的课程依据组织答案，或配置生成模型："
+                f"\n\n[1] {first.excerpt}\n\n"
+                "建议结构：概念界定 → 结合题目分析 → 得出结论 → 核对引用。"
+            )
         if mode == "hint":
             return (
                 "先判断题目要求你解释、比较还是应用概念。第一步可以从资料中的这条依据开始："

@@ -57,7 +57,7 @@ class QuestionCreate(BaseModel):
 
 class HomeworkCreate(BaseModel):
     question: str = Field(min_length=3, max_length=5000)
-    mode: str = Field(default="hint", max_length=20)
+    mode: str = Field(default="draft", max_length=20)
     student_attempt: str = Field(default="", max_length=10000)
 
 

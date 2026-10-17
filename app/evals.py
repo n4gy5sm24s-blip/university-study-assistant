@@ -59,7 +59,11 @@ def run_eval(
     cases_path: Path = DEFAULT_CASES,
     materials_directory: Path = DEFAULT_MATERIALS,
 ) -> EvalSummary:
-    temporary_root = Path(tempfile.mkdtemp(prefix="study-assistant-eval-"))
+    temporary_parent = PROJECT_ROOT / "tests" / ".tmp"
+    temporary_parent.mkdir(parents=True, exist_ok=True)
+    temporary_root = Path(
+        tempfile.mkdtemp(prefix="study-assistant-eval-", dir=temporary_parent)
+    )
     try:
         database = temporary_root / "eval.db"
         courses = CourseRepository(database)

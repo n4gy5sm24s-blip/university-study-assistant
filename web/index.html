@@ -3,121 +3,101 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>大学生学习助手</title>
+    <meta name="theme-color" content="#000000" />
+    <title>Coursework AI</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main>
-      <header>
-        <p class="eyebrow">UNIVERSITY STUDY ASSISTANT</p>
-        <h1>先建立你的课程空间</h1>
-        <p class="lead">以后每门课程的资料、问答、作业辅导和复习记录都会放在各自的空间里。</p>
-      </header>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand"><div class="brand-mark">C</div><div><strong>Coursework</strong><span>AI workspace</span></div></div>
+        <button class="new-course" id="new-course" type="button"><span>＋</span> 新建课程</button>
+        <div class="sidebar-label">课程空间</div>
+        <nav class="course-list" id="course-list"></nav>
+        <div class="sidebar-footer"><span class="status-dot"></span><div><strong>本地运行</strong><span>资料保存在这台电脑</span></div></div>
+      </aside>
 
-      <section class="panel">
-        <form id="course-form">
-          <label>
-            课程名称
-            <input id="name" name="name" maxlength="120" required placeholder="例如：管理学原理" />
-          </label>
-          <label>
-            简短说明
-            <textarea id="description" name="description" maxlength="1000" placeholder="例如：本学期专业必修课"></textarea>
-          </label>
-          <button type="submit">创建课程</button>
-          <p id="form-message" role="status"></p>
-        </form>
-      </section>
-
-      <section>
-        <div class="section-title">
-          <h2>我的课程</h2>
-          <button class="secondary" id="refresh" type="button">刷新</button>
-        </div>
-        <div id="course-list" class="course-list"></div>
-      </section>
-
-      <section id="materials-panel" class="panel hidden">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">COURSE MATERIALS</p>
-            <h2 id="selected-course">课程资料</h2>
+      <main class="workspace">
+        <header class="topbar">
+          <button class="icon-button mobile-only" id="menu-button" type="button" aria-label="打开课程栏">☰</button>
+          <div class="course-heading"><strong id="active-course-name">选择一门课程</strong><span id="active-course-detail">创建课程后开始写作业</span></div>
+          <div class="top-actions">
+            <button class="ghost-button" id="review-open" type="button" disabled>复习计划</button>
+            <button class="ghost-button" id="materials-open" type="button" disabled>资料库</button>
           </div>
-          <button class="secondary" id="close-materials" type="button">关闭</button>
-        </div>
-        <form id="document-form">
-          <label>
-            选择 Markdown 或纯文本资料
-            <input id="document-file" type="file" accept=".md,.txt,text/plain,text/markdown" required />
-          </label>
-          <button type="submit">上传资料</button>
-          <p id="document-message" role="status"></p>
+        </header>
+
+        <section class="conversation" id="conversation">
+          <div class="welcome" id="welcome">
+            <div class="welcome-mark">C</div>
+            <h1>今天要完成什么作业？</h1>
+            <p>选择课程，粘贴题目。我会先查找你的课程资料，再生成带依据的作业草稿。</p>
+            <div class="suggestion-grid">
+              <button data-suggestion="根据课程资料，帮我完成这道作业题：">完成一道作业题<span>生成完整、可编辑的草稿</span></button>
+              <button data-mode-suggestion="ask" data-suggestion="请用大白话解释：">随时问问题<span>基于课程资料回答</span></button>
+              <button data-mode-suggestion="review" data-suggestion="请检查我的答案是否完整：">检查我的答案<span>指出遗漏和逻辑问题</span></button>
+            </div>
+          </div>
+          <div class="message-list" id="message-list"></div>
+        </section>
+
+        <section class="composer-wrap">
+          <div class="mode-tabs" role="tablist" aria-label="工作模式">
+            <button class="mode-tab active" data-mode="draft" type="button">写作业</button>
+            <button class="mode-tab" data-mode="ask" type="button">随时问答</button>
+            <button class="mode-tab" data-mode="review" type="button">检查答案</button>
+          </div>
+          <form class="composer" id="composer-form">
+            <textarea id="composer-input" rows="1" placeholder="粘贴作业题目，按 Enter 发送…" required></textarea>
+            <textarea id="attempt-input" class="attempt-input hidden" rows="2" placeholder="粘贴你已经写好的答案…"></textarea>
+            <div class="composer-bottom">
+              <span id="composer-hint">将根据当前课程资料生成作业草稿</span>
+              <button class="send-button" id="send-button" type="submit" aria-label="发送">↑</button>
+            </div>
+          </form>
+          <p class="composer-status" id="composer-status" role="status"></p>
+          <p class="disclaimer">生成内容可能有误，请核对课程要求、事实和引用。</p>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="course-dialog">
+      <form class="dialog-card" id="course-form">
+        <div class="dialog-header"><div><span>NEW COURSE</span><h2>创建课程空间</h2></div><button class="close-button" type="button" data-close="course-dialog" aria-label="关闭">×</button></div>
+        <label>课程名称<input id="course-name" maxlength="120" required placeholder="例如：管理学原理" /></label>
+        <label>课程说明<textarea id="course-description" maxlength="1000" placeholder="例如：本学期专业必修课"></textarea></label>
+        <p class="form-message" id="course-message"></p>
+        <button class="primary-button" type="submit">创建并进入</button>
+      </form>
+    </dialog>
+
+    <dialog id="materials-dialog">
+      <div class="dialog-card wide-dialog">
+        <div class="dialog-header"><div><span>KNOWLEDGE BASE</span><h2>课程资料库</h2></div><button class="close-button" type="button" data-close="materials-dialog" aria-label="关闭">×</button></div>
+        <form id="document-form" class="upload-zone">
+          <label>上传 Markdown 或 TXT<input id="document-file" type="file" accept=".md,.txt,text/plain,text/markdown" required /></label>
+          <button class="primary-button" type="submit">上传资料</button>
         </form>
-        <div id="document-list" class="document-list"></div>
-        <hr />
-        <form id="search-form">
-          <label>
-            搜索这门课程的资料
-            <input id="search-query" minlength="3" required placeholder="例如：竞争优势" />
-          </label>
-          <button type="submit">搜索资料</button>
-          <p id="search-message" role="status"></p>
+        <p class="form-message" id="document-message"></p>
+        <div class="document-list" id="document-list"></div>
+      </div>
+    </dialog>
+
+    <dialog id="review-dialog">
+      <div class="dialog-card wide-dialog">
+        <div class="dialog-header"><div><span>EXAM MODE</span><h2>紧急复习计划</h2></div><button class="close-button" type="button" data-close="review-dialog" aria-label="关闭">×</button></div>
+        <form id="review-form" class="review-form">
+          <label>考试范围<input id="review-scope" value="全部内容" required /></label>
+          <label>可用时间（小时）<input id="review-hours" type="number" min="0.5" max="168" step="0.5" value="3" required /></label>
+          <label>薄弱主题（可选）<input id="weak-topics" placeholder="例如：心理安全" /></label>
+          <button class="primary-button" type="submit">生成计划</button>
         </form>
-        <div id="search-results" class="document-list"></div>
-        <hr />
-        <form id="question-form">
-          <label>
-            根据课程资料提问
-            <textarea id="question-input" minlength="3" required placeholder="例如：什么是竞争优势？"></textarea>
-          </label>
-          <button type="submit">查找资料依据</button>
-          <p id="question-message" role="status"></p>
-        </form>
-        <article id="answer-card" class="answer-card hidden"></article>
-        <hr />
-        <form id="homework-form">
-          <h3>作业辅导</h3>
-          <label>
-            我需要哪种帮助
-            <select id="homework-mode">
-              <option value="hint">只提示方向和第一步</option>
-              <option value="steps">分步讲解</option>
-              <option value="review">检查我的尝试</option>
-            </select>
-          </label>
-          <label>
-            作业题目
-            <textarea id="homework-question" minlength="3" required placeholder="粘贴题目，但不要包含姓名、学号等隐私信息"></textarea>
-          </label>
-          <label>
-            我的尝试（检查模式必填）
-            <textarea id="student-attempt" placeholder="写下你已经想到或完成的内容"></textarea>
-          </label>
-          <button type="submit">获取辅导</button>
-          <p id="homework-message" role="status"></p>
-        </form>
-        <article id="homework-card" class="answer-card hidden"></article>
-        <hr />
-        <form id="review-form">
-          <h3>紧急复习计划</h3>
-          <label>
-            考试范围
-            <input id="review-scope" value="全部内容" required placeholder="例如：竞争战略与团队管理" />
-          </label>
-          <label>
-            可用时间（小时）
-            <input id="review-hours" type="number" min="0.5" max="168" step="0.5" value="3" required />
-          </label>
-          <label>
-            特别薄弱的主题（可选）
-            <input id="weak-topics" placeholder="例如：心理安全" />
-          </label>
-          <button type="submit">生成复习计划</button>
-          <p id="review-message" role="status"></p>
-        </form>
-        <article id="review-card" class="answer-card hidden"></article>
-      </section>
-    </main>
+        <p class="form-message" id="review-message"></p>
+        <article id="review-result"></article>
+      </div>
+    </dialog>
+
+    <div class="sidebar-scrim" id="sidebar-scrim"></div>
     <script src="/static/app.js"></script>
   </body>
 </html>

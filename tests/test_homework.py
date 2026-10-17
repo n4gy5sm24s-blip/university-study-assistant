@@ -50,6 +50,16 @@ class HomeworkServiceTests(unittest.TestCase):
         self.assertIn("第一步", result.guidance)
         self.assertEqual(result.citations[0].section_title, "心理安全")
 
+    def test_draft_mode_is_default_and_uses_course_evidence(self) -> None:
+        service = HomeworkService(self.database, use_environment_generator=False)
+        result = service.guide(
+            self.course.id, "分析心理安全如何影响团队合作"
+        )
+        self.assertEqual(result.mode, "draft")
+        self.assertEqual(result.grounding_status, "grounded")
+        self.assertIn("作业草稿", result.guidance)
+        self.assertEqual(result.citations[0].section_title, "心理安全")
+
     def test_review_mode_requires_student_attempt(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)
         with self.assertRaises(HomeworkValidationError):
