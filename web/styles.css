@@ -36,6 +36,8 @@ button { color: inherit; }
 .top-actions { display: flex; gap: 8px; }
 .ghost-button, .icon-button { border: 1px solid #272727; border-radius: 9px; color: #aaa; background: #0e0e0e; cursor: pointer; }
 .ghost-button { padding: 8px 12px; font-size: .78rem; }
+.urgent-button:not(:disabled) { color: #f2f2f2; border-color: #414141; }
+.mobile-label { display: none; }
 .ghost-button:hover:not(:disabled), .icon-button:hover { color: #fff; border-color: #3a3a3a; background: #161616; }
 .ghost-button:disabled { opacity: .35; cursor: not-allowed; }
 .icon-button { padding: 7px 9px; }
@@ -115,7 +117,12 @@ dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
   .sidebar-scrim.open { display: block; }
   .mobile-only { display: block; }
   .topbar { padding: 0 14px; }
-  .top-actions .ghost-button:first-child { display: none; }
+  .course-heading { min-width: 0; }
+  .course-heading strong, .course-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-actions { gap: 5px; }
+  .ghost-button { padding: 7px 9px; }
+  .desktop-label { display: none; }
+  .mobile-label { display: inline; }
   .conversation { padding: 26px 18px 18px; }
   .welcome { padding-top: 7vh; }
   .composer-wrap { width: calc(100% - 20px); }

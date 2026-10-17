@@ -22,7 +22,7 @@
           <button class="icon-button mobile-only" id="menu-button" type="button" aria-label="打开课程栏">☰</button>
           <div class="course-heading"><strong id="active-course-name">选择一门课程</strong><span id="active-course-detail">创建课程后开始写作业</span></div>
           <div class="top-actions">
-            <button class="ghost-button" id="review-open" type="button" disabled>复习计划</button>
+            <button class="ghost-button urgent-button" id="review-open" type="button" disabled><span class="desktop-label">考前急救</span><span class="mobile-label">急救</span></button>
             <button class="ghost-button" id="materials-open" type="button" disabled>资料库</button>
           </div>
         </header>
@@ -89,7 +89,7 @@
 
     <dialog id="review-dialog">
       <div class="dialog-card wide-dialog">
-        <div class="dialog-header"><div><span>EXAM MODE</span><h2>紧急复习计划</h2></div><button class="close-button" type="button" data-close="review-dialog" aria-label="关闭">×</button></div>
+        <div class="dialog-header"><div><span>EXAM MODE</span><h2>考前急救</h2></div><button class="close-button" type="button" data-close="review-dialog" aria-label="关闭">×</button></div>
         <form id="review-form" class="review-form">
           <label>考试范围<input id="review-scope" value="全部内容" required /></label>
           <label>可用时间（小时）<input id="review-hours" type="number" min="0.5" max="168" step="0.5" value="3" required /></label>
