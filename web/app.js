@@ -70,18 +70,27 @@ function setMode(mode) {
   $("#composer-input").focus();
 }
 
-function addMessage(role, content, citations = [], meta = "") {
+function addMessage(role, content, citations = [], meta = "", assessment = null) {
   $("#welcome").classList.add("hidden");
   const message = document.createElement("article");
   message.className = `message ${role}`;
   const sourceChips = citations.map(citation => `
     <span class="citation-chip">[${citation.number}] ${escapeHtml(citation.filename)}${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""}</span>
   `).join("");
+  const assessmentCard = assessment && assessment.level !== "sufficient" ? `
+    <section class="evidence-card ${escapeHtml(assessment.level)}">
+      <div class="evidence-card-head"><strong>资料充分度</strong><span>${assessment.coverage_percent}%</span></div>
+      <p>${escapeHtml(assessment.summary)}</p>
+      ${assessment.missing?.length ? `<h4>还缺少</h4><ul>${assessment.missing.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+      ${assessment.capture_suggestions?.length ? `<h4>建议补拍</h4><ol>${assessment.capture_suggestions.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol><small>请把小节标题、正文、图表和页码一起拍清楚。</small>` : ""}
+    </section>
+  ` : "";
   message.innerHTML = `
     <div class="message-avatar">${role === "user" ? "你" : "C"}</div>
     <div>
       <div class="message-role">${role === "user" ? "你" : "Coursework AI"}</div>
       <div class="message-content">${escapeHtml(content)}</div>
+      ${assessmentCard}
       ${sourceChips ? `<div class="citations">${sourceChips}</div>` : ""}
       ${meta ? `<div class="message-meta">${escapeHtml(meta)}</div>` : ""}
     </div>
@@ -124,7 +133,7 @@ async function submitPrompt() {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({question: prompt, mode: state.mode, student_attempt: attempt, image_data_url: imageDataUrl})
       });
-      addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method));
+      addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method), result.evidence_assessment);
     }
     $("#composer-status").textContent = result.grounding_status === "no_evidence" ? "课程资料依据不足" : "";
   } catch (error) {

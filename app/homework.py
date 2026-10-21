@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .answers import Citation
+from .evidence import EvidenceAssessment, assess_evidence
 from .generation import AnswerGenerator, generator_from_environment
 from .retrieval import RetrievalRepository, SearchResult
 
@@ -24,10 +25,12 @@ class HomeworkGuidance:
     grounding_status: str
     generation_method: str
     citations: list[Citation]
+    evidence_assessment: EvidenceAssessment
 
     def to_dict(self) -> dict[str, object]:
         result = asdict(self)
         result["citations"] = [citation.to_dict() for citation in self.citations]
+        result["evidence_assessment"] = self.evidence_assessment.to_dict()
         return result
 
 
@@ -78,14 +81,16 @@ class HomeworkService:
             raise HomeworkValidationError("检查模式需要先填写你的尝试")
 
         results = self.retrieval.search(course_id, clean_question, limit=3)
+        assessment = assess_evidence(clean_question, results)
         if not results:
             return HomeworkGuidance(
                 question=clean_question,
                 mode=mode,
-                guidance="当前课程资料中没有找到足够依据，暂时不能可靠地辅导这道题。",
+                guidance="当前课程资料中没有找到足够依据。请按照下方建议补充相关教材页面。",
                 grounding_status="no_evidence",
                 generation_method="none",
                 citations=[],
+                evidence_assessment=assessment,
             )
 
         citations = [self._citation(index, result) for index, result in enumerate(results, 1)]
@@ -107,6 +112,7 @@ class HomeworkService:
                     "grounded",
                     self.generator.method_name,
                     citations,
+                    assessment,
                 )
             except Exception:
                 generation_failed = True
@@ -118,6 +124,7 @@ class HomeworkService:
             "grounded",
             "extractive_fallback" if generation_failed else "extractive",
             citations,
+            assessment,
         )
 
     @staticmethod

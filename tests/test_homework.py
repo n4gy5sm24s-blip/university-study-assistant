@@ -122,9 +122,27 @@ class HomeworkServiceTests(unittest.TestCase):
 
     def test_missing_course_evidence_does_not_generate_guidance(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)
-        result = service.guide(self.course.id, "计算圆锥体积", "steps")
+        result = service.guide(self.course.id, "计算圆锥体积并说明公式", "steps")
         self.assertEqual(result.grounding_status, "no_evidence")
         self.assertEqual(result.citations, [])
+        self.assertEqual(result.evidence_assessment.coverage_percent, 0)
+        self.assertTrue(
+            any("公式、计算步骤" in item for item in result.evidence_assessment.missing)
+        )
+        self.assertTrue(result.evidence_assessment.capture_suggestions)
+
+    def test_partial_evidence_identifies_what_to_capture(self) -> None:
+        service = HomeworkService(self.database, use_environment_generator=False)
+        result = service.guide(
+            self.course.id,
+            "分析心理安全如何影响团队绩效，并结合案例提出管理建议",
+        )
+        self.assertEqual(result.evidence_assessment.level, "critical")
+        self.assertGreater(result.evidence_assessment.coverage_percent, 0)
+        self.assertIn("课程案例或应用材料", result.evidence_assessment.missing)
+        self.assertTrue(
+            any("案例" in item for item in result.evidence_assessment.capture_suggestions)
+        )
 
 
 if __name__ == "__main__":
