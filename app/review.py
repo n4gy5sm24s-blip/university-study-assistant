@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .answers import Citation
+from .generation import AnswerGenerator, generator_from_environment
 from .retrieval import RetrievalRepository, SearchResult
 
 
@@ -33,6 +34,68 @@ class ReviewPlan:
 
 class ReviewValidationError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class ReviewFeedback:
+    topic: str
+    feedback: str
+    status: str
+    generation_method: str
+    citation: Citation
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+class ReviewCoachService:
+    def __init__(
+        self,
+        database: Path | None = None,
+        generator: AnswerGenerator | None = None,
+        use_environment_generator: bool = True,
+    ) -> None:
+        self.retrieval = RetrievalRepository(database)
+        self.generator = (
+            generator_from_environment()
+            if generator is None and use_environment_generator
+            else generator
+        )
+
+    def evaluate(self, course_id: int, topic: str, answer: str) -> ReviewFeedback:
+        clean_topic = topic.strip()
+        clean_answer = answer.strip()
+        if len(clean_topic) < 2:
+            raise ReviewValidationError("复习主题不能为空")
+        if len(clean_answer) < 2:
+            raise ReviewValidationError("请先写下你的回答")
+        results = self.retrieval.search(course_id, clean_topic, limit=1)
+        if not results:
+            raise ReviewValidationError("当前课程资料中找不到这个复习主题")
+        citation = ReviewPlanService._citation(1, results[0])
+        if self.generator is not None:
+            try:
+                feedback = self.generator.generate(
+                    f"复习主题：{clean_topic}\n学生闭卷回答：{clean_answer}",
+                    [citation.excerpt],
+                    (
+                        "你正在带学生考前复习。先指出回答中正确的部分，再指出遗漏或错误，"
+                        "最后给出一段不超过120字的参考回答。只依据课程资料，语气直接清楚。"
+                    ),
+                )
+                return ReviewFeedback(
+                    clean_topic, feedback, "reviewed", self.generator.method_name, citation
+                )
+            except Exception:
+                pass
+        feedback = (
+            "已经完成一次闭卷回忆。请对照下面的课程依据检查：你的回答是否包含核心定义、"
+            "关键作用以及一个具体例子。\n\n参考依据：\n"
+            f"{citation.excerpt}"
+        )
+        if len(clean_answer) < 20:
+            feedback = "你的回答还比较短，至少需要说清核心概念和它的作用。\n\n" + feedback
+        return ReviewFeedback(clean_topic, feedback, "reviewed", "extractive", citation)
 
 
 class ReviewPlanService:
@@ -74,7 +137,7 @@ class ReviewPlanService:
                 "no_evidence",
                 clean_scope,
                 total_minutes,
-                "当前课程没有可用于制定复习计划的资料。",
+                "当前课程没有可用于开始急救复习的资料。请先上传老师的课件或课堂笔记。",
                 ["未找到课程资料，因此没有推测考试重点。"],
                 [],
                 [],

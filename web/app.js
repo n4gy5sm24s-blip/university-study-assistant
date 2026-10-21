@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
-const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null };
+const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null };
 const modeCopy = {
   draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
@@ -253,14 +253,77 @@ $("#document-list").addEventListener("click", async event => {
 $("#review-open").addEventListener("click", () => $("#review-dialog").showModal());
 $("#review-form").addEventListener("submit", async event => {
   event.preventDefault();
-  $("#review-message").textContent = "正在生成计划…";
+  $("#review-message").textContent = "正在读取课程资料并安排第一轮复习…";
   $("#review-result").innerHTML = "";
   try {
     const result = await api(`/api/courses/${state.selectedCourse.id}/review-plans`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({scope: $("#review-scope").value, available_hours: Number($("#review-hours").value), weak_topics: $("#weak-topics").value})});
-    $("#review-message").textContent = result.overview;
-    if (result.status !== "ready") return;
-    $("#review-result").innerHTML = result.blocks.map(block => `<div class="review-block"><strong>${block.minutes} 分钟 · ${escapeHtml(block.topic)}</strong><br>${escapeHtml(block.activity)}</div>`).join("") + `<h3>闭卷自测</h3><ol>${result.self_test.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`;
+    if (result.status !== "ready") { $("#review-message").textContent = result.overview; return; }
+    $("#review-message").textContent = "";
+    state.reviewSession = {citations: result.citations, questions: result.self_test, index: 0};
+    $("#review-form").classList.add("hidden");
+    renderCoachStep();
   } catch (error) { $("#review-message").textContent = error.message; }
+});
+
+function renderCoachStep(feedback = "") {
+  const session = state.reviewSession;
+  if (!session || session.index >= session.citations.length) {
+    $("#review-result").innerHTML = `
+      <div class="coach-complete"><span>REVIEW COMPLETE</span><h3>本轮急救复习完成</h3>
+      <p>你已经对全部主题做过一次闭卷回忆。现在只回看答不清的部分，然后再进行一轮自测。</p>
+      <button class="primary-button" data-review-restart type="button">再复习一轮</button></div>`;
+    return;
+  }
+  const citation = session.citations[session.index];
+  const topic = citation.section_title || citation.filename;
+  $("#review-result").innerHTML = `
+    <div class="coach-progress"><span>第 ${session.index + 1} / ${session.citations.length} 个主题</span><strong>${escapeHtml(topic)}</strong></div>
+    <section class="coach-lesson">
+      <span>先理解</span>
+      <p>${escapeHtml(citation.excerpt)}</p>
+      <small>来源：${escapeHtml(citation.filename)}${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""}</small>
+    </section>
+    <section class="coach-question">
+      <span>现在闭卷回答</span>
+      <h3>${escapeHtml(session.questions[session.index])}</h3>
+      <textarea id="coach-answer" rows="4" placeholder="不要看上面的资料，用自己的话回答…">${escapeHtml(session.lastAnswer || "")}</textarea>
+      <button class="primary-button" data-coach-submit type="button">提交回答并纠错</button>
+    </section>
+    ${feedback ? `<section class="coach-feedback"><span>纠错反馈</span><p>${escapeHtml(feedback)}</p><button class="primary-button" data-coach-next type="button">进入下一个知识点</button></section>` : ""}
+  `;
+  if (feedback) {
+    $("#coach-answer").disabled = true;
+    $("[data-coach-submit]").classList.add("hidden");
+  }
+}
+
+$("#review-result").addEventListener("click", async event => {
+  if (event.target.closest("[data-coach-submit]")) {
+    const answer = $("#coach-answer").value.trim();
+    if (!answer) { $("#review-message").textContent = "请先用自己的话回答，再提交纠错。"; return; }
+    const citation = state.reviewSession.citations[state.reviewSession.index];
+    const topic = citation.section_title || citation.filename;
+    $("#review-message").textContent = "正在根据课程资料检查你的回答…";
+    try {
+      const result = await api(`/api/courses/${state.selectedCourse.id}/review-coach`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({topic, answer})
+      });
+      state.reviewSession.lastAnswer = answer;
+      $("#review-message").textContent = "";
+      renderCoachStep(result.feedback);
+    } catch (error) { $("#review-message").textContent = error.message; }
+  }
+  if (event.target.closest("[data-coach-next]")) {
+    state.reviewSession.index += 1;
+    state.reviewSession.lastAnswer = "";
+    renderCoachStep();
+  }
+  if (event.target.closest("[data-review-restart]")) {
+    state.reviewSession.index = 0;
+    state.reviewSession.lastAnswer = "";
+    renderCoachStep();
+  }
 });
 
 $$("[data-close]").forEach(button => button.addEventListener("click", () => $(`#${button.dataset.close}`).close()));

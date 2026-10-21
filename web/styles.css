@@ -117,6 +117,17 @@ dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 #review-result { color: #ccc; font-size: .84rem; line-height: 1.65; }
 .review-block { margin-top: 9px; padding: 11px; border-left: 2px solid #555; background: #111; }
 .review-block strong { color: #eee; }
+.coach-panel { display: grid; gap: 13px; }
+.coach-progress { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #777; font-size: .7rem; }
+.coach-progress strong { color: #eee; font-size: .88rem; }
+.coach-lesson, .coach-question, .coach-feedback, .coach-complete { padding: 15px; border: 1px solid #292929; border-radius: 12px; background: #111; }
+.coach-lesson > span, .coach-question > span, .coach-feedback > span, .coach-complete > span { color: #686868; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.coach-lesson p, .coach-feedback p, .coach-complete p { color: #bbb; white-space: pre-wrap; line-height: 1.7; }
+.coach-lesson small { color: #666; }
+.coach-question h3 { margin: 8px 0 12px; color: #eee; font-size: .95rem; line-height: 1.55; }
+.coach-question textarea { margin-bottom: 11px; }
+.coach-feedback { border-color: #40523f; }
+.coach-complete h3 { margin: 7px 0; color: #eee; }
 .sidebar-scrim { display: none; }
 @media (max-width: 760px) {
   .app-shell { grid-template-columns: 1fr; }

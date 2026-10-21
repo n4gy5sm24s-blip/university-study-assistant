@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from app.courses import CourseRepository
 from app.documents import DocumentRepository
-from app.review import ReviewPlanService, ReviewValidationError
+from app.review import ReviewCoachService, ReviewPlanService, ReviewValidationError
 
 
 class ReviewPlanServiceTests(unittest.TestCase):
@@ -62,6 +62,27 @@ class ReviewPlanServiceTests(unittest.TestCase):
     def test_rejects_invalid_available_time(self) -> None:
         with self.assertRaises(ReviewValidationError):
             self.service.create_plan(self.course.id, "全部内容", 0.25)
+
+    def test_coach_evaluates_answer_against_course_evidence(self) -> None:
+        coach = ReviewCoachService(
+            self.database, use_environment_generator=False
+        )
+        result = coach.evaluate(
+            self.course.id,
+            "心理安全",
+            "心理安全让团队成员愿意提出问题和承认错误。",
+        )
+        self.assertEqual(result.status, "reviewed")
+        self.assertEqual(result.generation_method, "extractive")
+        self.assertEqual(result.citation.section_title, "心理安全")
+        self.assertIn("参考依据", result.feedback)
+
+    def test_coach_rejects_unknown_topic(self) -> None:
+        coach = ReviewCoachService(
+            self.database, use_environment_generator=False
+        )
+        with self.assertRaises(ReviewValidationError):
+            coach.evaluate(self.course.id, "量子纠缠", "这是一个回答。")
 
 
 if __name__ == "__main__":
