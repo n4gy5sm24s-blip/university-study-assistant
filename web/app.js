@@ -245,13 +245,14 @@ $("#document-form").addEventListener("submit", async event => {
     try {
       await uploadDocument(file);
       succeeded += 1;
+      await loadDocuments();
     } catch (error) {
       failures.push(`${file.name}：${error.message}`);
     }
   }
   event.target.reset();
   submitButton.disabled = false;
-  const result = `已成功上传 ${succeeded}/${files.length} 份资料。`;
+  const result = `批量处理完成：成功 ${succeeded}/${files.length} 份。`;
   $("#document-message").textContent = failures.length
     ? `${result} 失败：${failures.join("；")}`
     : result;
