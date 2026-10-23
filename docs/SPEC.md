@@ -169,8 +169,8 @@
 
 ### 决定 2：资料格式分阶段支持
 
-- MVP：带文字层的 PDF、Markdown 和纯文本。
-- 后续：DOCX、PPTX、扫描版 PDF 和图片 OCR。
+- 当前 MVP：PPTX、Markdown 和纯文本。
+- 后续：带文字层的 PDF、DOCX、扫描版 PDF 和图片 OCR。
 
 ### 决定 3：作业帮助的默认强度
 

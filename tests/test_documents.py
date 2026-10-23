@@ -1,7 +1,10 @@
 from pathlib import Path
+from io import BytesIO
+import base64
 import shutil
 import unittest
 from uuid import uuid4
+from pptx import Presentation
 
 from app.courses import CourseRepository
 from app.documents import (
@@ -9,6 +12,7 @@ from app.documents import (
     DocumentRepository,
     DocumentValidationError,
     DuplicateDocumentError,
+    SUPPORTED_SUFFIXES,
 )
 
 
@@ -39,6 +43,33 @@ class DocumentRepositoryTests(unittest.TestCase):
             self.documents.create(self.course.id, "lesson.pdf", "内容")
         with self.assertRaises(DocumentValidationError):
             self.documents.create(self.course.id, "lesson.txt", "   ")
+
+    def test_upload_pptx_extracts_slide_text_for_search(self) -> None:
+        presentation = Presentation()
+        slide = presentation.slides.add_slide(presentation.slide_layouts[1])
+        slide.shapes.title.text = "心理安全"
+        slide.placeholders[1].text = "心理安全让团队成员能够提出问题并承认错误。"
+        buffer = BytesIO()
+        presentation.save(buffer)
+        data_url = (
+            "data:application/vnd.openxmlformats-officedocument."
+            "presentationml.presentation;base64,"
+            + base64.b64encode(buffer.getvalue()).decode("ascii")
+        )
+        created = self.documents.create(
+            self.course.id, "week4.pptx", file_data_url=data_url
+        )
+        self.assertEqual(created.status, "ready")
+        self.assertEqual(created.media_type, SUPPORTED_SUFFIXES[".pptx"])
+        self.assertEqual(len(list(self.storage.rglob("*.pptx"))), 1)
+
+        from app.retrieval import RetrievalRepository
+
+        results = RetrievalRepository(self.database).search(
+            self.course.id, "心理安全"
+        )
+        self.assertEqual(results[0].filename, "week4.pptx")
+        self.assertEqual(results[0].section_title, "第 1 张：心理安全")
 
     def test_rejects_duplicate_content_in_same_course(self) -> None:
         self.documents.create(self.course.id, "one.txt", "相同内容")

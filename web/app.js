@@ -159,7 +159,7 @@ async function loadDocuments() {
   const documents = await api(`/api/courses/${state.selectedCourse.id}/documents`);
   list.innerHTML = documents.length ? documents.map(document => `
     <div class="document-row"><div><strong>${escapeHtml(document.filename)}</strong><div class="document-meta">${document.status} · ${document.size_bytes} bytes</div></div><button class="delete-button" data-delete-document="${document.id}" type="button">删除</button></div>
-  `).join("") : '<p class="form-message">还没有资料。上传 TXT 或 Markdown 后即可使用。</p>';
+  `).join("") : '<p class="form-message">还没有资料。优先上传老师的 PPTX，也支持 TXT 和 Markdown。</p>';
 }
 
 $("#new-course").addEventListener("click", () => $("#course-dialog").showModal());
@@ -237,12 +237,26 @@ $("#document-form").addEventListener("submit", async event => {
   if (!file) return;
   $("#document-message").textContent = "正在上传并建立索引…";
   try {
-    await api(`/api/courses/${state.selectedCourse.id}/documents`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({filename: file.name, content: await file.text()})});
+    const isPresentation = file.name.toLowerCase().endsWith(".pptx");
+    if (isPresentation && file.size > 25 * 1024 * 1024) throw new Error("PPTX 不能超过 25MB");
+    const payload = isPresentation
+      ? {filename: file.name, file_data_url: await readFileAsDataUrl(file)}
+      : {filename: file.name, content: await file.text()};
+    await api(`/api/courses/${state.selectedCourse.id}/documents`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
     event.target.reset();
     $("#document-message").textContent = "资料已加入当前课程。";
     await loadDocuments();
   } catch (error) { $("#document-message").textContent = error.message; }
 });
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(new Error("没有成功读取文件")));
+    reader.readAsDataURL(file);
+  });
+}
 $("#document-list").addEventListener("click", async event => {
   const id = event.target.dataset.deleteDocument;
   if (!id || !window.confirm("删除这份资料？")) return;

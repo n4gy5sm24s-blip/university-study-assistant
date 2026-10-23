@@ -49,7 +49,8 @@ class CourseCreate(BaseModel):
 
 class DocumentCreate(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
-    content: str
+    content: str = ""
+    file_data_url: str = Field(default="", max_length=35_000_000)
 
 
 class QuestionCreate(BaseModel):
@@ -127,7 +128,7 @@ def create_document(
 ) -> dict[str, object]:
     try:
         return document_repository.create(
-            course_id, payload.filename, payload.content
+            course_id, payload.filename, payload.content, payload.file_data_url
         ).to_dict()
     except DocumentCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
