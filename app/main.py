@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from .answers import GroundedAnswerService, QuestionValidationError
 from .assignments import AssignmentNotFoundError, AssignmentRepository, AssignmentValidationError
 from .course_profile import CourseProfileService
+from .course_preferences import CoursePreferencesNotFoundError, CoursePreferencesRepository
 from .courses import CourseNotFoundError, CourseRepository
 from .documents import (
     CourseNotFoundError as DocumentCourseNotFoundError,
@@ -42,6 +43,7 @@ review_service = ReviewPlanService()
 review_coach_service = ReviewCoachService()
 course_profile_service = CourseProfileService()
 assignment_repository = AssignmentRepository()
+course_preferences_repository = CoursePreferencesRepository()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -89,6 +91,14 @@ class AssignmentCreate(BaseModel):
 class AssignmentUpdate(BaseModel):
     final_text: str = Field(min_length=1, max_length=30000)
     status: str = Field(default="draft", max_length=20)
+
+
+class CoursePreferencesUpdate(BaseModel):
+    language: str = Field(min_length=1, max_length=60)
+    citation_style: str = Field(min_length=1, max_length=120)
+    tone: str = Field(min_length=1, max_length=200)
+    target_length: str = Field(default="", max_length=100)
+    teacher_requirements: str = Field(default="", max_length=3000)
 
 
 @app.get("/", include_in_schema=False)
@@ -141,6 +151,31 @@ def course_profile(course_id: int) -> dict[str, object]:
         return course_profile_service.build(course_id).to_dict()
     except DocumentCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/courses/{course_id}/preferences")
+def get_course_preferences(course_id: int) -> dict[str, object]:
+    try:
+        return course_preferences_repository.get(course_id).to_dict()
+    except CoursePreferencesNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.put("/api/courses/{course_id}/preferences")
+def update_course_preferences(course_id: int, payload: CoursePreferencesUpdate) -> dict[str, object]:
+    try:
+        return course_preferences_repository.save(
+            course_id,
+            payload.language,
+            payload.citation_style,
+            payload.tone,
+            payload.target_length,
+            payload.teacher_requirements,
+        ).to_dict()
+    except CoursePreferencesNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @app.get("/api/courses/{course_id}/assignments")

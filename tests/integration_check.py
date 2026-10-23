@@ -14,6 +14,7 @@ os.environ["STUDY_ASSISTANT_DB"] = str(CHECK_ROOT / "integration.db")
 from app.main import (  # noqa: E402
     AssignmentCreate,
     AssignmentUpdate,
+    CoursePreferencesUpdate,
     CourseCreate,
     DocumentCreate,
     HomeworkCreate,
@@ -28,11 +29,13 @@ from app.main import (  # noqa: E402
     delete_document,
     health,
     guide_homework,
+    get_course_preferences,
     list_courses,
     list_assignments,
     list_documents,
     search_course,
     update_assignment,
+    update_course_preferences,
 )
 
 
@@ -43,6 +46,18 @@ def main() -> None:
             CourseCreate(name="测试课程", description="集成检查")
         )
         assert len(list_courses()) == 1
+        preferences = update_course_preferences(
+            int(course["id"]),
+            CoursePreferencesUpdate(
+                language="英文",
+                citation_style="APA 7th",
+                tone="正式、简洁",
+                target_length="800 words",
+                teacher_requirements="结合课程案例",
+            ),
+        )
+        assert preferences["citation_style"] == "APA 7th"
+        assert get_course_preferences(int(course["id"]))["language"] == "英文"
 
         document = create_document(
             int(course["id"]),
@@ -107,7 +122,7 @@ def main() -> None:
         assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: upload, Q&A, homework, assignment projects, review plan, citations, deletion")
+        print("INTEGRATION OK: preferences, upload, Q&A, homework, assignment projects, review plan, citations, deletion")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

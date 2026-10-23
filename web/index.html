@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Coursework AI</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261023-5" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261023-6" />
   </head>
   <body>
     <div class="app-shell">
@@ -25,6 +25,7 @@
           <div class="course-heading"><strong id="active-course-name">选择一门课程</strong><span id="active-course-detail">创建课程后开始写作业</span></div>
           <div class="top-actions">
             <button class="ghost-button context-toggle" id="context-open" type="button" disabled>课程画像</button>
+            <button class="ghost-button" id="preferences-open" type="button" disabled>写作规则</button>
             <button class="ghost-button urgent-button" id="review-open" type="button" disabled><span class="desktop-label">考前急救</span><span class="mobile-label">急救</span></button>
             <button class="ghost-button" id="materials-open" type="button" disabled>资料库</button>
           </div>
@@ -146,8 +147,22 @@
       </div>
     </dialog>
 
+    <dialog id="preferences-dialog">
+      <form class="dialog-card" id="preferences-form">
+        <div class="dialog-header"><div><span>CONTEXT RULES</span><h2>课程写作规则</h2></div><button class="close-button" type="button" data-close="preferences-dialog" aria-label="关闭">×</button></div>
+        <p class="dialog-intro">这些规则会在每次生成作业时自动加入 Context。</p>
+        <label>作业语言<input id="preference-language" required placeholder="例如：中文或英文" /></label>
+        <label>引用格式<input id="preference-citation" required placeholder="例如：APA 7th" /></label>
+        <label>写作语气<input id="preference-tone" required placeholder="例如：正式、简洁、避免过度复杂句" /></label>
+        <label>目标篇幅<input id="preference-length" placeholder="例如：800-1000 字" /></label>
+        <label>老师要求<textarea id="preference-requirements" rows="5" placeholder="粘贴评分标准、结构要求、禁止事项等"></textarea></label>
+        <p class="form-message" id="preferences-message"></p>
+        <button class="primary-button" type="submit">保存课程规则</button>
+      </form>
+    </dialog>
+
     <div class="sidebar-scrim" id="sidebar-scrim"></div>
     <div class="context-scrim" id="context-scrim"></div>
-    <script src="/static/app.js?v=20261023-5"></script>
+    <script src="/static/app.js?v=20261023-6"></script>
   </body>
 </html>

@@ -55,6 +55,7 @@ function selectCourse(course) {
   $("#materials-open").disabled = !course;
   $("#review-open").disabled = !course;
   $("#context-open").disabled = !course;
+  $("#preferences-open").disabled = !course;
   renderCourses();
   closeSidebar();
   loadCourseProfile();
@@ -271,6 +272,43 @@ async function updateActiveAssignment(status) {
 
 $("#assignment-save").addEventListener("click", () => updateActiveAssignment("draft"));
 $("#assignment-complete").addEventListener("click", () => updateActiveAssignment("complete"));
+
+$("#preferences-open").addEventListener("click", async () => {
+  $("#preferences-message").textContent = "正在读取课程规则…";
+  $("#preferences-dialog").showModal();
+  try {
+    const preferences = await api(`/api/courses/${state.selectedCourse.id}/preferences`);
+    $("#preference-language").value = preferences.language;
+    $("#preference-citation").value = preferences.citation_style;
+    $("#preference-tone").value = preferences.tone;
+    $("#preference-length").value = preferences.target_length;
+    $("#preference-requirements").value = preferences.teacher_requirements;
+    $("#preferences-message").textContent = "";
+  } catch (error) {
+    $("#preferences-message").textContent = error.message;
+  }
+});
+
+$("#preferences-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("#preferences-message").textContent = "正在保存…";
+  try {
+    await api(`/api/courses/${state.selectedCourse.id}/preferences`, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        language: $("#preference-language").value,
+        citation_style: $("#preference-citation").value,
+        tone: $("#preference-tone").value,
+        target_length: $("#preference-length").value,
+        teacher_requirements: $("#preference-requirements").value
+      })
+    });
+    $("#preferences-message").textContent = "课程规则已保存，之后生成作业会自动使用。";
+  } catch (error) {
+    $("#preferences-message").textContent = error.message;
+  }
+});
 
 function generationLabel(method) {
   if (method === "openai_responses") return "生成模型 · 已使用课程资料";

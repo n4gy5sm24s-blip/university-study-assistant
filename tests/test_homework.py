@@ -4,6 +4,7 @@ import unittest
 from uuid import uuid4
 
 from app.courses import CourseRepository
+from app.course_preferences import CoursePreferencesRepository
 from app.documents import DocumentRepository
 from app.homework import HomeworkService, HomeworkValidationError
 
@@ -119,6 +120,21 @@ class HomeworkServiceTests(unittest.TestCase):
         self.assertEqual(result.generation_method, "capturing_generator")
         self.assertIn("我的答案", generator.question)
         self.assertIn("不冒充学生", generator.task_instructions)
+
+    def test_draft_uses_saved_course_writing_rules(self) -> None:
+        CoursePreferencesRepository(self.database).save(
+            self.course.id,
+            "英文",
+            "APA 7th",
+            "正式、简洁",
+            "800 words",
+            "必须结合课程案例",
+        )
+        generator = CapturingGenerator()
+        service = HomeworkService(self.database, generator=generator, use_environment_generator=False)
+        service.guide(self.course.id, "分析心理安全如何影响团队合作")
+        self.assertIn("APA 7th", generator.task_instructions)
+        self.assertIn("必须结合课程案例", generator.task_instructions)
 
     def test_missing_course_evidence_does_not_generate_guidance(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)

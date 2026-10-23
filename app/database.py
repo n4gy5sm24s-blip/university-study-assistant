@@ -85,6 +85,20 @@ def initialize(path: Path | None = None) -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS course_preferences (
+                course_id INTEGER PRIMARY KEY,
+                language TEXT NOT NULL DEFAULT '中文',
+                citation_style TEXT NOT NULL DEFAULT '课程资料编号引用',
+                tone TEXT NOT NULL DEFAULT '清楚、正式的大学作业语气',
+                target_length TEXT NOT NULL DEFAULT '',
+                teacher_requirements TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
             CREATE VIRTUAL TABLE IF NOT EXISTS chunk_search USING fts5(
                 chunk_id UNINDEXED,
                 course_id UNINDEXED,

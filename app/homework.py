@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .answers import Citation
+from .course_preferences import CoursePreferencesRepository
 from .evidence import EvidenceAssessment, assess_evidence
 from .generation import AnswerGenerator, generator_from_environment
 from .retrieval import RetrievalRepository, SearchResult
@@ -46,6 +47,7 @@ class HomeworkService:
         use_environment_generator: bool = True,
     ) -> None:
         self.retrieval = RetrievalRepository(database)
+        self.preferences = CoursePreferencesRepository(database)
         self.generator = (
             generator_from_environment()
             if generator is None and use_environment_generator
@@ -100,10 +102,11 @@ class HomeworkService:
         generation_failed = False
         if self.generator is not None:
             try:
+                preferences = self.preferences.get(course_id)
                 guidance = self.generator.generate(
                     prompt_question,
                     [citation.excerpt for citation in citations],
-                    GUIDANCE_INSTRUCTIONS[mode],
+                    f"{GUIDANCE_INSTRUCTIONS[mode]}\n\n本课程长期写作规则：{preferences.generation_instructions()}",
                 )
                 return HomeworkGuidance(
                     clean_question,
