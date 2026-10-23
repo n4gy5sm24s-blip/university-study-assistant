@@ -16,13 +16,22 @@ button { color: inherit; }
 .new-course:hover { background: #1a1a1a; border-color: #3a3a3a; }
 .new-course span { font-size: 1.15rem; color: #aaa; }
 .sidebar-label { padding: 22px 10px 9px; color: #656565; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
-.course-list { display: grid; gap: 3px; overflow-y: auto; }
+.course-list { display: grid; max-height: 28vh; gap: 3px; overflow-y: auto; }
 .course-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; padding: 9px 8px 9px 11px; border: 0; border-radius: 8px; color: #a7a7a7; background: transparent; cursor: pointer; text-align: left; }
 .course-item:hover, .course-item.active { color: #fff; background: #181818; }
 .course-item strong { display: block; overflow: hidden; font-size: .88rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .course-delete { border: 0; color: #666; background: transparent; opacity: 0; cursor: pointer; }
 .course-item:hover .course-delete { opacity: 1; }
 .sidebar-empty { padding: 10px; color: #5f5f5f; font-size: .82rem; line-height: 1.55; }
+.assignment-label { padding-top: 18px; }
+.assignment-list { display: grid; gap: 4px; overflow-y: auto; }
+.assignment-item { display: grid; grid-template-columns: 7px minmax(0, 1fr); align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; color: #999; background: transparent; text-align: left; cursor: pointer; }
+.assignment-item:hover { color: #fff; background: #171717; }
+.assignment-item strong, .assignment-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignment-item strong { font-size: .76rem; font-weight: 500; }
+.assignment-item small { margin-top: 3px; color: #5f5f5f; font-size: .62rem; }
+.assignment-status { width: 6px; height: 6px; border-radius: 50%; background: #696969; }
+.assignment-status.complete { background: #58ca84; box-shadow: 0 0 8px rgba(88,202,132,.35); }
 .sidebar-footer { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 13px 9px 2px; border-top: 1px solid #1d1d1d; }
 .sidebar-footer strong, .sidebar-footer span { display: block; }
 .sidebar-footer strong { font-size: .75rem; font-weight: 500; }
@@ -110,6 +119,7 @@ dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .dialog-card input:focus, .dialog-card textarea:focus { border-color: #505050; }
 .primary-button { width: fit-content; padding: 10px 15px; border: 0; border-radius: 9px; color: #050505; background: #f0f0f0; font-weight: 700; cursor: pointer; }
 .primary-button:disabled { color: #777; background: #2a2a2a; cursor: wait; }
+.secondary-button { width: fit-content; padding: 9px 14px; border: 1px solid #333; border-radius: 9px; color: #bbb; background: #171717; cursor: pointer; }
 .form-message { min-height: 18px; margin: 0; color: #858585; font-size: .75rem; }
 .upload-zone, .review-form { display: grid; gap: 14px; }
 .document-list { display: grid; gap: 8px; }
@@ -131,6 +141,18 @@ dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .coach-question textarea { margin-bottom: 11px; }
 .coach-feedback { border-color: #40523f; }
 .coach-complete h3 { margin: 7px 0; color: #eee; }
+.assignment-dialog { width: min(720px, calc(100% - 30px)); }
+.assignment-prompt { padding: 13px 14px; border: 1px solid #252525; border-radius: 10px; background: #111; }
+.assignment-prompt span, .section-caption { color: #626262; font-size: .64rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.assignment-prompt p { margin: 7px 0 0; color: #bbb; font-size: .8rem; line-height: 1.6; white-space: pre-wrap; }
+#assignment-final { min-height: 260px; line-height: 1.7; }
+.assignment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.assignment-citations { display: grid; gap: 8px; margin-top: 9px; }
+.assignment-citations article { padding: 11px; border: 1px solid #252525; border-radius: 9px; background: #111; }
+.assignment-citations strong, .assignment-citations span { display: block; }
+.assignment-citations strong { color: #ccc; font-size: .73rem; }
+.assignment-citations span { margin-top: 3px; color: #606060; font-size: .64rem; }
+.assignment-citations p { margin: 8px 0 0; color: #8d8d8d; font-size: .7rem; line-height: 1.55; }
 .sidebar-scrim { display: none; }
 .context-scrim { display: none; }
 .context-panel { min-width: 0; overflow-y: auto; padding: 18px 16px; border-left: 1px solid #1c1c1c; background: #070707; }

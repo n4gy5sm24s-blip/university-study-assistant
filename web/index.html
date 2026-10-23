@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Coursework AI</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261023-4" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261023-5" />
   </head>
   <body>
     <div class="app-shell">
@@ -14,6 +14,8 @@
         <button class="new-course" id="new-course" type="button"><span>＋</span> 新建课程</button>
         <div class="sidebar-label">课程空间</div>
         <nav class="course-list" id="course-list"></nav>
+        <div class="sidebar-label assignment-label">作业项目</div>
+        <nav class="assignment-list" id="assignment-list"><p class="sidebar-empty">选择课程后显示历史作业。</p></nav>
         <div class="sidebar-footer"><span class="status-dot"></span><div><strong>本地运行</strong><span>资料保存在这台电脑</span></div></div>
       </aside>
 
@@ -130,8 +132,22 @@
       </div>
     </dialog>
 
+    <dialog id="assignment-dialog" class="assignment-dialog">
+      <div class="dialog-card wide-dialog">
+        <div class="dialog-header"><div><span>ASSIGNMENT PROJECT</span><h2 id="assignment-title">作业项目</h2></div><button class="close-button" type="button" data-close="assignment-dialog" aria-label="关闭">×</button></div>
+        <section class="assignment-prompt"><span>原题</span><p id="assignment-prompt"></p></section>
+        <label>最终稿<textarea id="assignment-final" rows="12"></textarea></label>
+        <div class="assignment-actions">
+          <button class="primary-button" id="assignment-save" type="button">保存修改</button>
+          <button class="secondary-button" id="assignment-complete" type="button">标记为已完成</button>
+        </div>
+        <p class="form-message" id="assignment-message"></p>
+        <section><span class="section-caption">引用依据</span><div class="assignment-citations" id="assignment-citations"></div></section>
+      </div>
+    </dialog>
+
     <div class="sidebar-scrim" id="sidebar-scrim"></div>
     <div class="context-scrim" id="context-scrim"></div>
-    <script src="/static/app.js?v=20261023-4"></script>
+    <script src="/static/app.js?v=20261023-5"></script>
   </body>
 </html>

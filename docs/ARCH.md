@@ -46,6 +46,7 @@
 - Chunk：文本、章节、页码、来源文档、顺序。
 - Conversation：课程、模式、消息。
 - Citation：回答与 Chunk 的对应关系。
+- Assignment：课程中的作业项目，保存题目、生成草稿、引用依据、最终稿和完成状态。
 - LearningRecord：知识点、掌握程度、错题和更新时间。
 - EvalCase / EvalRun：测试输入、预期行为和实际结果。
 

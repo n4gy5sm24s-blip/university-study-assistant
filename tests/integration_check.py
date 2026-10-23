@@ -12,6 +12,8 @@ CHECK_ROOT.mkdir(parents=True)
 os.environ["STUDY_ASSISTANT_DB"] = str(CHECK_ROOT / "integration.db")
 
 from app.main import (  # noqa: E402
+    AssignmentCreate,
+    AssignmentUpdate,
     CourseCreate,
     DocumentCreate,
     HomeworkCreate,
@@ -19,6 +21,7 @@ from app.main import (  # noqa: E402
     ReviewPlanCreate,
     ask_course,
     create_course,
+    create_assignment,
     create_document,
     create_review_plan,
     delete_course,
@@ -26,8 +29,10 @@ from app.main import (  # noqa: E402
     health,
     guide_homework,
     list_courses,
+    list_assignments,
     list_documents,
     search_course,
+    update_assignment,
 )
 
 
@@ -73,6 +78,22 @@ def main() -> None:
         assert homework["grounding_status"] == "grounded"
         assert homework["mode"] == "hint"
         assert homework["citations"][0]["filename"] == "demo.md"
+        assignment = create_assignment(
+            int(course["id"]),
+            AssignmentCreate(
+                title="案例作业",
+                prompt="请分析虚构内容在案例中的作用",
+                draft=str(homework["guidance"]),
+                citations=homework["citations"],
+            ),
+        )
+        assert len(list_assignments(int(course["id"]))) == 1
+        completed = update_assignment(
+            int(course["id"]),
+            int(assignment["id"]),
+            AssignmentUpdate(final_text="经过修改的最终稿", status="complete"),
+        )
+        assert completed["status"] == "complete"
         review_plan = create_review_plan(
             int(course["id"]),
             ReviewPlanCreate(scope="全部内容", available_hours=1),
@@ -86,7 +107,7 @@ def main() -> None:
         assert search_course(int(course["id"]), "虚构内容") == []
         delete_course(int(course["id"]))
         assert list_courses() == []
-        print("INTEGRATION OK: upload, Q&A, homework, review plan, citations, deletion")
+        print("INTEGRATION OK: upload, Q&A, homework, assignment projects, review plan, citations, deletion")
     finally:
         shutil.rmtree(CHECK_ROOT, ignore_errors=True)
 

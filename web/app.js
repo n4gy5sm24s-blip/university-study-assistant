@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
-const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map() };
+const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map(), assignments: [], activeAssignment: null };
 const modeCopy = {
   draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
@@ -58,6 +58,42 @@ function selectCourse(course) {
   renderCourses();
   closeSidebar();
   loadCourseProfile();
+  loadAssignments();
+}
+
+async function loadAssignments() {
+  const list = $("#assignment-list");
+  if (!state.selectedCourse) {
+    state.assignments = [];
+    list.innerHTML = '<p class="sidebar-empty">选择课程后显示历史作业。</p>';
+    return;
+  }
+  try {
+    state.assignments = await api(`/api/courses/${state.selectedCourse.id}/assignments`);
+    list.innerHTML = state.assignments.length ? state.assignments.map(assignment => `
+      <button class="assignment-item" data-assignment-id="${assignment.id}" type="button">
+        <span class="assignment-status ${assignment.status}"></span>
+        <span><strong>${escapeHtml(assignment.title)}</strong><small>${assignment.status === "complete" ? "已完成" : "草稿"}</small></span>
+      </button>
+    `).join("") : '<p class="sidebar-empty">生成第一份作业后会自动保存在这里。</p>';
+  } catch (error) {
+    list.innerHTML = `<p class="sidebar-empty">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function assignmentTitle(prompt) {
+  const firstLine = prompt.split(/\r?\n/).find(line => line.trim()) || "未命名作业";
+  return firstLine.trim().slice(0, 32);
+}
+
+async function saveAssignmentProject(prompt, result) {
+  const assignment = await api(`/api/courses/${state.selectedCourse.id}/assignments`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title: assignmentTitle(prompt), prompt, draft: result.guidance, citations: result.citations})
+  });
+  await loadAssignments();
+  return assignment;
 }
 
 async function loadCourseProfile() {
@@ -171,9 +207,17 @@ async function submitPrompt() {
       });
       setWorkflow("draft");
       addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method), result.evidence_assessment);
+      if (state.mode === "draft" && result.grounding_status !== "no_evidence") {
+        await saveAssignmentProject(displayedPrompt, result);
+        $("#composer-status").textContent = "草稿已保存到作业项目";
+      }
     }
     setWorkflow("verify");
-    $("#composer-status").textContent = result.grounding_status === "no_evidence" ? "课程资料依据不足" : "";
+    if (result.grounding_status === "no_evidence") {
+      $("#composer-status").textContent = "课程资料依据不足";
+    } else if (!(state.mode === "draft" && result.guidance)) {
+      $("#composer-status").textContent = "";
+    }
   } catch (error) {
     addMessage("assistant", `没有完成这次请求：${error.message}`);
     $("#composer-status").textContent = "";
@@ -193,6 +237,40 @@ $("#message-list").addEventListener("click", event => {
   $("#source-inspector").innerHTML = `<strong>${escapeHtml(citation.filename)}</strong><span>${escapeHtml(citation.section_title || `片段 ${citation.sequence + 1}`)}</span><p>${escapeHtml(citation.excerpt)}</p>`;
   $$(".citation-chip").forEach(item => item.classList.toggle("selected", item === button));
 });
+
+$("#assignment-list").addEventListener("click", event => {
+  const button = event.target.closest("[data-assignment-id]");
+  if (!button) return;
+  state.activeAssignment = state.assignments.find(item => item.id === Number(button.dataset.assignmentId));
+  if (!state.activeAssignment) return;
+  $("#assignment-title").textContent = state.activeAssignment.title;
+  $("#assignment-prompt").textContent = state.activeAssignment.prompt;
+  $("#assignment-final").value = state.activeAssignment.final_text || state.activeAssignment.draft;
+  $("#assignment-message").textContent = state.activeAssignment.status === "complete" ? "此项目已标记为完成。" : "可以继续修改最终稿。";
+  $("#assignment-citations").innerHTML = state.activeAssignment.citations.length
+    ? state.activeAssignment.citations.map(item => `<article><strong>${escapeHtml(item.filename)}</strong><span>${escapeHtml(item.section_title || "课程资料")}</span><p>${escapeHtml(item.excerpt)}</p></article>`).join("")
+    : '<p class="form-message">这份项目没有引用依据。</p>';
+  $("#assignment-dialog").showModal();
+});
+
+async function updateActiveAssignment(status) {
+  if (!state.activeAssignment) return;
+  $("#assignment-message").textContent = "正在保存…";
+  try {
+    state.activeAssignment = await api(`/api/courses/${state.selectedCourse.id}/assignments/${state.activeAssignment.id}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({final_text: $("#assignment-final").value, status})
+    });
+    $("#assignment-message").textContent = status === "complete" ? "已保存并标记为完成。" : "修改已保存。";
+    await loadAssignments();
+  } catch (error) {
+    $("#assignment-message").textContent = error.message;
+  }
+}
+
+$("#assignment-save").addEventListener("click", () => updateActiveAssignment("draft"));
+$("#assignment-complete").addEventListener("click", () => updateActiveAssignment("complete"));
 
 function generationLabel(method) {
   if (method === "openai_responses") return "生成模型 · 已使用课程资料";

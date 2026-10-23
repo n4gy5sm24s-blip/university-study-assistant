@@ -68,6 +68,23 @@ def initialize(path: Path | None = None) -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_id INTEGER NOT NULL,
+                title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                prompt TEXT NOT NULL CHECK(length(trim(prompt)) > 0),
+                draft TEXT NOT NULL DEFAULT '',
+                final_text TEXT NOT NULL DEFAULT '',
+                citations_json TEXT NOT NULL DEFAULT '[]',
+                status TEXT NOT NULL DEFAULT 'draft',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
             CREATE VIRTUAL TABLE IF NOT EXISTS chunk_search USING fts5(
                 chunk_id UNINDEXED,
                 course_id UNINDEXED,

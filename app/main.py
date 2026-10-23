@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from .answers import GroundedAnswerService, QuestionValidationError
+from .assignments import AssignmentNotFoundError, AssignmentRepository, AssignmentValidationError
 from .course_profile import CourseProfileService
 from .courses import CourseNotFoundError, CourseRepository
 from .documents import (
@@ -40,6 +41,7 @@ homework_service = HomeworkService()
 review_service = ReviewPlanService()
 review_coach_service = ReviewCoachService()
 course_profile_service = CourseProfileService()
+assignment_repository = AssignmentRepository()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -75,6 +77,18 @@ class ReviewPlanCreate(BaseModel):
 class ReviewAnswerCreate(BaseModel):
     topic: str = Field(min_length=2, max_length=500)
     answer: str = Field(min_length=2, max_length=5000)
+
+
+class AssignmentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    prompt: str = Field(min_length=1, max_length=5000)
+    draft: str = Field(default="", max_length=30000)
+    citations: list[dict[str, object]] = Field(default_factory=list)
+
+
+class AssignmentUpdate(BaseModel):
+    final_text: str = Field(min_length=1, max_length=30000)
+    status: str = Field(default="draft", max_length=20)
 
 
 @app.get("/", include_in_schema=False)
@@ -127,6 +141,35 @@ def course_profile(course_id: int) -> dict[str, object]:
         return course_profile_service.build(course_id).to_dict()
     except DocumentCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/courses/{course_id}/assignments")
+def list_assignments(course_id: int) -> list[dict[str, object]]:
+    return [assignment.to_dict() for assignment in assignment_repository.list_for_course(course_id)]
+
+
+@app.post("/api/courses/{course_id}/assignments", status_code=status.HTTP_201_CREATED)
+def create_assignment(course_id: int, payload: AssignmentCreate) -> dict[str, object]:
+    try:
+        return assignment_repository.create(
+            course_id, payload.title, payload.prompt, payload.draft, payload.citations
+        ).to_dict()
+    except AssignmentNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except AssignmentValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.patch("/api/courses/{course_id}/assignments/{assignment_id}")
+def update_assignment(course_id: int, assignment_id: int, payload: AssignmentUpdate) -> dict[str, object]:
+    try:
+        return assignment_repository.update(
+            course_id, assignment_id, payload.final_text, payload.status
+        ).to_dict()
+    except AssignmentNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except AssignmentValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @app.post(
