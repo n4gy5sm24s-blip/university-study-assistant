@@ -79,8 +79,8 @@
       <div class="dialog-card wide-dialog">
         <div class="dialog-header"><div><span>KNOWLEDGE BASE</span><h2>课程资料库</h2></div><button class="close-button" type="button" data-close="materials-dialog" aria-label="关闭">×</button></div>
         <form id="document-form" class="upload-zone">
-          <label>上传 PPTX、Markdown 或 TXT<input id="document-file" type="file" accept=".pptx,.md,.txt,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation" required /></label>
-          <button class="primary-button" type="submit">上传资料</button>
+          <label>批量上传 PPTX、Markdown 或 TXT<input id="document-file" type="file" multiple accept=".pptx,.md,.txt,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation" required /></label>
+          <button class="primary-button" type="submit">上传所选资料</button>
         </form>
         <p class="form-message" id="document-message"></p>
         <div class="document-list" id="document-list"></div>

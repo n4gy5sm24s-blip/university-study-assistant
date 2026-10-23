@@ -233,21 +233,46 @@ $("#image-remove").addEventListener("click", clearHomeworkImage);
 $("#materials-open").addEventListener("click", async () => { $("#materials-dialog").showModal(); await loadDocuments(); });
 $("#document-form").addEventListener("submit", async event => {
   event.preventDefault();
-  const file = $("#document-file").files[0];
-  if (!file) return;
-  $("#document-message").textContent = "正在上传并建立索引…";
-  try {
-    const isPresentation = file.name.toLowerCase().endsWith(".pptx");
-    if (isPresentation && file.size > 25 * 1024 * 1024) throw new Error("PPTX 不能超过 25MB");
-    const payload = isPresentation
-      ? {filename: file.name, file_data_url: await readFileAsDataUrl(file)}
-      : {filename: file.name, content: await file.text()};
-    await api(`/api/courses/${state.selectedCourse.id}/documents`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
-    event.target.reset();
-    $("#document-message").textContent = "资料已加入当前课程。";
-    await loadDocuments();
-  } catch (error) { $("#document-message").textContent = error.message; }
+  const files = [...$("#document-file").files];
+  if (!files.length) return;
+  const submitButton = event.target.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  let succeeded = 0;
+  const failures = [];
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    $("#document-message").textContent = `正在处理 ${index + 1}/${files.length}：${file.name}`;
+    try {
+      await uploadDocument(file);
+      succeeded += 1;
+    } catch (error) {
+      failures.push(`${file.name}：${error.message}`);
+    }
+  }
+  event.target.reset();
+  submitButton.disabled = false;
+  const result = `已成功上传 ${succeeded}/${files.length} 份资料。`;
+  $("#document-message").textContent = failures.length
+    ? `${result} 失败：${failures.join("；")}`
+    : result;
+  await loadDocuments();
 });
+
+async function uploadDocument(file) {
+  const suffix = file.name.toLowerCase().split(".").pop();
+  if (!["pptx", "md", "txt"].includes(suffix)) throw new Error("不支持这种文件格式");
+  const isPresentation = suffix === "pptx";
+  if (isPresentation && file.size > 25 * 1024 * 1024) throw new Error("PPTX 不能超过 25MB");
+  if (!isPresentation && file.size > 2 * 1024 * 1024) throw new Error("文本资料不能超过 2MB");
+  const payload = isPresentation
+    ? {filename: file.name, file_data_url: await readFileAsDataUrl(file)}
+    : {filename: file.name, content: await file.text()};
+  return api(`/api/courses/${state.selectedCourse.id}/documents`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  });
+}
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
