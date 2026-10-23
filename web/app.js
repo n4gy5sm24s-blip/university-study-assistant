@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
-const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null };
+const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map() };
 const modeCopy = {
   draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
@@ -54,8 +54,40 @@ function selectCourse(course) {
   $("#active-course-detail").textContent = course?.description || (course ? "课程工作区" : "创建课程后开始写作业");
   $("#materials-open").disabled = !course;
   $("#review-open").disabled = !course;
+  $("#context-open").disabled = !course;
   renderCourses();
   closeSidebar();
+  loadCourseProfile();
+}
+
+async function loadCourseProfile() {
+  if (!state.selectedCourse) {
+    $("#profile-documents").textContent = "0";
+    $("#profile-chunks").textContent = "0";
+    $("#profile-topics").innerHTML = "";
+    $("#profile-summary").textContent = "选择课程后，这里会显示 AI 从资料中整理出的课程结构。";
+    return;
+  }
+  try {
+    const profile = await api(`/api/courses/${state.selectedCourse.id}/profile`);
+    $("#profile-documents").textContent = profile.document_count;
+    $("#profile-chunks").textContent = profile.chunk_count;
+    $("#profile-summary").textContent = profile.summary;
+    $("#profile-topics").innerHTML = profile.topics.length
+      ? profile.topics.map(topic => `<span>${escapeHtml(topic)}</span>`).join("")
+      : '<small>上传资料后自动提取主题</small>';
+  } catch (error) {
+    $("#profile-summary").textContent = error.message;
+  }
+}
+
+function setWorkflow(stage = "") {
+  const order = ["analyze", "retrieve", "draft", "verify"];
+  const activeIndex = order.indexOf(stage);
+  $$("#workflow-list li").forEach((item, index) => {
+    item.classList.toggle("active", index === activeIndex);
+    item.classList.toggle("complete", activeIndex > index || stage === "complete");
+  });
 }
 
 function setMode(mode) {
@@ -74,9 +106,11 @@ function addMessage(role, content, citations = [], meta = "", assessment = null)
   $("#welcome").classList.add("hidden");
   const message = document.createElement("article");
   message.className = `message ${role}`;
-  const sourceChips = citations.map(citation => `
-    <span class="citation-chip">[${citation.number}] ${escapeHtml(citation.filename)}${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""}</span>
-  `).join("");
+  const sourceChips = citations.map(citation => {
+    const key = `${Date.now()}-${citation.document_id}-${citation.number}`;
+    state.citations.set(key, citation);
+    return `<button class="citation-chip" data-citation-key="${key}" type="button">[${citation.number}] ${escapeHtml(citation.filename)}${citation.section_title ? ` · ${escapeHtml(citation.section_title)}` : ""}</button>`;
+  }).join("");
   const assessmentCard = assessment && assessment.level !== "sufficient" ? `
     <section class="evidence-card ${escapeHtml(assessment.level)}">
       <div class="evidence-card-head"><strong>资料充分度</strong><span>${assessment.coverage_percent}%</span></div>
@@ -119,9 +153,11 @@ async function submitPrompt() {
   $("#attempt-input").value = "";
   clearHomeworkImage();
   state.busy = true;
+  setWorkflow("analyze");
   $("#send-button").disabled = true;
   $("#composer-status").textContent = state.mode === "draft" ? "正在检索资料并起草作业…" : "正在检索课程资料…";
   try {
+    setWorkflow("retrieve");
     let result;
     if (state.mode === "ask") {
       result = await api(`/api/courses/${state.selectedCourse.id}/questions`, {
@@ -133,8 +169,10 @@ async function submitPrompt() {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({question: prompt, mode: state.mode, student_attempt: attempt, image_data_url: imageDataUrl})
       });
+      setWorkflow("draft");
       addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method), result.evidence_assessment);
     }
+    setWorkflow("verify");
     $("#composer-status").textContent = result.grounding_status === "no_evidence" ? "课程资料依据不足" : "";
   } catch (error) {
     addMessage("assistant", `没有完成这次请求：${error.message}`);
@@ -143,8 +181,18 @@ async function submitPrompt() {
     state.busy = false;
     $("#send-button").disabled = false;
     $("#composer-input").focus();
+    window.setTimeout(() => setWorkflow("complete"), 350);
   }
 }
+
+$("#message-list").addEventListener("click", event => {
+  const button = event.target.closest("[data-citation-key]");
+  if (!button) return;
+  const citation = state.citations.get(button.dataset.citationKey);
+  if (!citation) return;
+  $("#source-inspector").innerHTML = `<strong>${escapeHtml(citation.filename)}</strong><span>${escapeHtml(citation.section_title || `片段 ${citation.sequence + 1}`)}</span><p>${escapeHtml(citation.excerpt)}</p>`;
+  $$(".citation-chip").forEach(item => item.classList.toggle("selected", item === button));
+});
 
 function generationLabel(method) {
   if (method === "openai_responses") return "生成模型 · 已使用课程资料";
@@ -246,6 +294,7 @@ $("#document-form").addEventListener("submit", async event => {
       await uploadDocument(file);
       succeeded += 1;
       await loadDocuments();
+      await loadCourseProfile();
     } catch (error) {
       failures.push(`${file.name}：${error.message}`);
     }
@@ -288,6 +337,7 @@ $("#document-list").addEventListener("click", async event => {
   if (!id || !window.confirm("删除这份资料？")) return;
   await api(`/api/courses/${state.selectedCourse.id}/documents/${id}`, {method: "DELETE"});
   await loadDocuments();
+  await loadCourseProfile();
 });
 
 $("#review-open").addEventListener("click", () => $("#review-dialog").showModal());
@@ -369,5 +419,7 @@ $("#review-result").addEventListener("click", async event => {
 $$("[data-close]").forEach(button => button.addEventListener("click", () => $(`#${button.dataset.close}`).close()));
 $("#menu-button").addEventListener("click", () => { $("#sidebar").classList.add("open"); $("#sidebar-scrim").classList.add("open"); });
 $("#sidebar-scrim").addEventListener("click", closeSidebar);
+$("#context-open").addEventListener("click", () => { $("#context-panel").classList.add("open"); $("#context-scrim").classList.add("open"); });
+$("#context-scrim").addEventListener("click", () => { $("#context-panel").classList.remove("open"); $("#context-scrim").classList.remove("open"); });
 
 loadCourses().catch(error => { $("#course-list").innerHTML = `<p class="sidebar-empty">${escapeHtml(error.message)}</p>`; });

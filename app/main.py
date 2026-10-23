@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from .answers import GroundedAnswerService, QuestionValidationError
+from .course_profile import CourseProfileService
 from .courses import CourseNotFoundError, CourseRepository
 from .documents import (
     CourseNotFoundError as DocumentCourseNotFoundError,
@@ -38,6 +39,7 @@ answer_service = GroundedAnswerService()
 homework_service = HomeworkService()
 review_service = ReviewPlanService()
 review_coach_service = ReviewCoachService()
+course_profile_service = CourseProfileService()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -115,6 +117,14 @@ def list_documents(course_id: int) -> list[dict[str, object]]:
             document.to_dict()
             for document in document_repository.list_for_course(course_id)
         ]
+    except DocumentCourseNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/courses/{course_id}/profile")
+def course_profile(course_id: int) -> dict[str, object]:
+    try:
+        return course_profile_service.build(course_id).to_dict()
     except DocumentCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 

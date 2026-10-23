@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Coursework AI</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261023-2" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261023-4" />
   </head>
   <body>
     <div class="app-shell">
@@ -22,6 +22,7 @@
           <button class="icon-button mobile-only" id="menu-button" type="button" aria-label="打开课程栏">☰</button>
           <div class="course-heading"><strong id="active-course-name">选择一门课程</strong><span id="active-course-detail">创建课程后开始写作业</span></div>
           <div class="top-actions">
+            <button class="ghost-button context-toggle" id="context-open" type="button" disabled>课程画像</button>
             <button class="ghost-button urgent-button" id="review-open" type="button" disabled><span class="desktop-label">考前急救</span><span class="mobile-label">急救</span></button>
             <button class="ghost-button" id="materials-open" type="button" disabled>资料库</button>
           </div>
@@ -63,6 +64,34 @@
           <p class="disclaimer">生成内容可能有误，请核对课程要求、事实和引用。</p>
         </section>
       </main>
+
+      <aside class="context-panel" id="context-panel">
+        <section class="context-section">
+          <div class="context-eyebrow">COURSE INTELLIGENCE</div>
+          <h2>课程画像</h2>
+          <p class="context-summary" id="profile-summary">选择课程后，这里会显示 AI 从资料中整理出的课程结构。</p>
+          <div class="profile-stats">
+            <div><strong id="profile-documents">0</strong><span>份资料</span></div>
+            <div><strong id="profile-chunks">0</strong><span>个知识片段</span></div>
+          </div>
+          <div class="topic-list" id="profile-topics"></div>
+        </section>
+        <section class="context-section workflow-section">
+          <div class="context-eyebrow">AGENT WORKFLOW</div>
+          <h2>当前任务</h2>
+          <ol class="workflow-list" id="workflow-list">
+            <li data-stage="analyze"><span>01</span><div><strong>分析题目</strong><small>识别任务和交付要求</small></div></li>
+            <li data-stage="retrieve"><span>02</span><div><strong>检索资料</strong><small>寻找课程依据</small></div></li>
+            <li data-stage="draft"><span>03</span><div><strong>生成草稿</strong><small>组织结构与论证</small></div></li>
+            <li data-stage="verify"><span>04</span><div><strong>核对引用</strong><small>检查来源和资料缺口</small></div></li>
+          </ol>
+        </section>
+        <section class="context-section source-section">
+          <div class="context-eyebrow">SOURCE INSPECTOR</div>
+          <h2>引用原文</h2>
+          <div id="source-inspector" class="source-empty">生成答案后，点击引用即可在这里查看原文。</div>
+        </section>
+      </aside>
     </div>
 
     <dialog id="course-dialog">
@@ -102,6 +131,7 @@
     </dialog>
 
     <div class="sidebar-scrim" id="sidebar-scrim"></div>
-    <script src="/static/app.js?v=20261023-2"></script>
+    <div class="context-scrim" id="context-scrim"></div>
+    <script src="/static/app.js?v=20261023-4"></script>
   </body>
 </html>
