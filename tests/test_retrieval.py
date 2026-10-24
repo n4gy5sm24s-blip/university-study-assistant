@@ -76,6 +76,22 @@ class RetrievalRepositoryTests(unittest.TestCase):
         with self.assertRaises(SearchValidationError):
             self.retrieval.search(course.id, "成本")
 
+    def test_exhibit_reference_uses_exact_number_and_prefers_text_alternative(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "chapter4.md",
+            "# Exhibit 4.3 Hierarchy of Goals\n其他图表。\n\n"
+            "# Exhibit 4.9 Sample SWOT Analysis\n只有图片。\n\n"
+            "# Exhibit 4.9 Sample SWOT Analysis - Text Alternative\n"
+            "Strengths: established customer base. Weaknesses: limited resources.",
+        )
+        results = self.retrieval.search(course.id, "给我讲讲exhibit4.9")
+        self.assertEqual(len(results), 2)
+        self.assertIn("Text Alternative", results[0].section_title)
+        self.assertTrue(all("4.9" in result.section_title for result in results))
+        self.assertEqual(self.retrieval.search(course.id, "exhibit 4.8"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

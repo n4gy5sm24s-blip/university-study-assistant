@@ -89,13 +89,29 @@ class GroundedAnswerService:
                 generation_failed = True
         return GroundedAnswer(
             question=clean_question,
-            answer=f"根据当前课程资料，找到以下直接相关内容：\n\n{evidence}",
+            answer=self._local_answer(clean_question, citations, evidence),
             grounding_status="grounded",
             generation_method=(
                 "extractive_fallback" if generation_failed else "extractive"
             ),
             citations=citations,
         )
+
+    @staticmethod
+    def _local_answer(question: str, citations: list[Citation], evidence: str) -> str:
+        from .retrieval import _EXHIBIT_REFERENCE
+
+        reference = _EXHIBIT_REFERENCE.search(question)
+        if reference:
+            label = f"Exhibit {reference.group(1)}.{reference.group(2)}"
+            primary = citations[0]
+            return (
+                f"我先按编号精确定位到 {label}，对应的是“{primary.section_title}”。\n\n"
+                f"这张图的课程原文如下：\n\n{primary.excerpt}\n\n"
+                "理解这张图时，可以先确认它要比较或归纳的几个部分，再把每一项与题目中的案例对应起来。"
+                "当前处于本地资料模式，因此这里只做基于原文的整理，不补充课程资料之外的解释。"
+            )
+        return f"根据当前课程资料，找到以下直接相关内容：\n\n{evidence}"
 
     @staticmethod
     def _citation(number: int, result: SearchResult) -> Citation:

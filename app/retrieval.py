@@ -14,6 +14,10 @@ _QUERY_NOISE = re.compile(
     r"请问|麻烦|帮我|解释一下|介绍一下|告诉我|什么是|是什么意思|为什么|怎么|如何|"
     r"请|呢|吗|？|\?|！|!|，|,|。|\.|：|:|；|;|\s+"
 )
+_EXHIBIT_REFERENCE = re.compile(
+    r"(?<![A-Za-z])exhibit\s*([0-9]+)\s*[.．·_-]\s*([0-9]+)(?![0-9])",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -158,6 +162,10 @@ class RetrievalRepository:
         if len(clean_query) < 3:
             raise SearchValidationError("搜索词至少需要 3 个字符")
         safe_limit = max(1, min(limit, 20))
+        exhibit = _EXHIBIT_REFERENCE.search(clean_query)
+        if exhibit:
+            reference = f"exhibit {exhibit.group(1)}.{exhibit.group(2)}"
+            return self._search_exact_reference(course_id, reference, safe_limit)
         fts_query = build_fts_query(clean_query)
         with connect(self.database) as connection:
             course = connection.execute(
@@ -178,6 +186,34 @@ class RetrievalRepository:
                 LIMIT ?
                 """,
                 (fts_query, course_id, safe_limit),
+            ).fetchall()
+        return [SearchResult(**dict(row)) for row in rows]
+
+    def _search_exact_reference(
+        self, course_id: int, reference: str, limit: int
+    ) -> list[SearchResult]:
+        pattern = f"%{reference.lower()}%"
+        with connect(self.database) as connection:
+            course = connection.execute(
+                "SELECT id FROM courses WHERE id = ?", (course_id,)
+            ).fetchone()
+            if course is None:
+                raise SearchCourseNotFoundError(f"课程 {course_id} 不存在")
+            rows = connection.execute(
+                """
+                SELECT c.id AS chunk_id, c.document_id, d.filename,
+                       c.section_title, c.sequence, c.content, 0.0 AS score
+                FROM chunks c
+                JOIN source_documents d ON d.id = c.document_id
+                WHERE c.course_id = ?
+                  AND (lower(c.section_title) LIKE ? OR lower(c.content) LIKE ?)
+                ORDER BY
+                  CASE WHEN lower(c.section_title) LIKE '%text alternative%' THEN 0 ELSE 1 END,
+                  length(c.content) DESC,
+                  c.id
+                LIMIT ?
+                """,
+                (course_id, pattern, pattern, limit),
             ).fetchall()
         return [SearchResult(**dict(row)) for row in rows]
 

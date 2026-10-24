@@ -89,6 +89,19 @@ class GroundedAnswerServiceTests(unittest.TestCase):
         )
         result = service.answer(course.id, "什么是机会成本？")
         self.assertEqual(result.generation_method, "extractive_fallback")
+
+    def test_local_answer_for_exhibit_explains_exact_location(self) -> None:
+        course = self.courses.create("管理学图表")
+        self.documents.create(
+            course.id,
+            "chapter4.md",
+            "# Exhibit 4.9 SWOT - Text Alternative\nStrengths include a customer base. Weaknesses include limited resources.",
+        )
+        service = GroundedAnswerService(self.database, use_environment_generator=False)
+        result = service.answer(course.id, "讲讲 exhibit4.9")
+        self.assertIn("精确定位", result.answer)
+        self.assertIn("Exhibit 4.9", result.answer)
+        self.assertEqual(result.citations[0].section_title, "Exhibit 4.9 SWOT - Text Alternative")
         self.assertEqual(result.grounding_status, "grounded")
 
 
