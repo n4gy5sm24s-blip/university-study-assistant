@@ -118,6 +118,24 @@ class RetrievalRepositoryTests(unittest.TestCase):
         self.assertTrue(results)
         self.assertEqual(results[0].section_title, "Business Strategy")
 
+    def test_expand_context_adds_neighbors_and_learning_objectives(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "BATE_2025R_Ch04_notes.md",
+            "# 第 2 张：Learning Objectives\n理解战略层次。\n\n"
+            "# 第 32 张：Corporate Strategy\n公司战略。\n\n"
+            "# 第 33 张：Business Strategy\n业务战略。\n\n"
+            "# 第 34 张：Functional Strategy\n职能战略。",
+        )
+        anchor = self.retrieval.search(course.id, "Ch04 第33张")
+        expanded = self.retrieval.expand_course_context(course.id, anchor)
+        titles = [item.section_title for item in expanded]
+        self.assertEqual(titles[0], "第 33 张：Business Strategy")
+        self.assertIn("第 32 张：Corporate Strategy", titles)
+        self.assertIn("第 34 张：Functional Strategy", titles)
+        self.assertIn("第 2 张：Learning Objectives", titles)
+
 
 if __name__ == "__main__":
     unittest.main()

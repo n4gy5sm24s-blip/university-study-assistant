@@ -216,7 +216,7 @@ async function submitPrompt() {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({question: prompt, history: state.chatHistory.slice(-6)})
       });
-      addMessage("assistant", result.answer, result.citations, generationLabel(result.generation_method));
+      addMessage("assistant", result.answer, result.citations, `${generationLabel(result.generation_method)} · 章节上下文 ${result.citations.length} 页`);
       state.chatHistory.push(
         {role: "user", content: prompt},
         {role: "assistant", content: result.answer}

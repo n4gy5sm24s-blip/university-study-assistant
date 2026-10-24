@@ -11,14 +11,14 @@ from app.documents import DocumentRepository
 class FakeGenerator:
     method_name = "fake_generator"
 
-    def generate(self, question: str, evidence: list[str]) -> str:
+    def generate(self, question: str, evidence: list[str], task_instructions: str = "") -> str:
         return f"机会成本是放弃的最佳替代选择。[1]"
 
 
 class FailingGenerator:
     method_name = "failing_generator"
 
-    def generate(self, question: str, evidence: list[str]) -> str:
+    def generate(self, question: str, evidence: list[str], task_instructions: str = "") -> str:
         raise RuntimeError("temporary failure")
 
 
@@ -27,9 +27,13 @@ class CapturingGenerator:
 
     def __init__(self) -> None:
         self.question = ""
+        self.evidence: list[str] = []
+        self.task_instructions = ""
 
-    def generate(self, question: str, evidence: list[str]) -> str:
+    def generate(self, question: str, evidence: list[str], task_instructions: str = "") -> str:
         self.question = question
+        self.evidence = evidence
+        self.task_instructions = task_instructions
         return "第33张介绍低成本战略和差异化战略。[1]"
 
 
@@ -145,6 +149,29 @@ class GroundedAnswerServiceTests(unittest.TestCase):
         )
         self.assertEqual(follow_up.citations[0].section_title, "第 33 张：Business Strategy")
         self.assertIn("这两种有什么区别", generator.question)
+
+    def test_teaching_answer_receives_neighboring_slides_and_objectives(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "BATE_2025R_Ch04_notes.md",
+            "# 第 2 张：Learning Objectives\n理解三层战略。\n\n"
+            "# 第 32 张：Corporate Strategy\n决定进入哪些业务。\n\n"
+            "# 第 33 张：Business Strategy\n低成本战略与差异化战略。\n\n"
+            "# 第 34 张：Functional Strategy\n各职能支持业务战略。",
+        )
+        generator = CapturingGenerator()
+        service = GroundedAnswerService(
+            self.database, generator=generator, use_environment_generator=False
+        )
+        result = service.answer(course.id, "Ch04 第33张讲了什么")
+        titles = [citation.section_title for citation in result.citations]
+        self.assertEqual(titles[0], "第 33 张：Business Strategy")
+        self.assertIn("第 32 张：Corporate Strategy", titles)
+        self.assertIn("第 34 张：Functional Strategy", titles)
+        self.assertIn("第 2 张：Learning Objectives", titles)
+        self.assertTrue(any("位置：第 34 张：Functional Strategy" in item for item in generator.evidence))
+        self.assertIn("本章中的位置", generator.task_instructions)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,15 @@ _FOLLOW_UP = re.compile(
     r"它|这(?:个|张|两种|些)?|那(?:个|张|些)?|两种|前者|后者|上面|刚才|不就是|区别|例子|什么意思"
 )
 
+TEACHING_INSTRUCTIONS = """你正在进行课程讲解，而不是复述检索片段。
+根据问题复杂度自然组织回答；用户要求讲解概念、PPT、图表或章节时，尽量覆盖：
+1. 它在本章中的位置，以及前后内容为什么这样衔接；
+2. 核心概念与概念之间的逻辑关系；
+3. 为什么重要，不这样做或混淆后会怎样；
+4. 一个明确标为“帮助理解的例子”的简单例子；
+5. 最后用一句话指出考试或作业最应抓住什么。
+不要机械输出五个标题；简单追问可以直接简洁回答。不要声称资料中明确写了你根据相邻页面推断出的关系。"""
+
 
 @dataclass(frozen=True)
 class Citation:
@@ -81,6 +90,7 @@ class GroundedAnswerService:
                 citations=[],
             )
 
+        results = self.retrieval.expand_course_context(course_id, results)
         citations = [self._citation(index, result) for index, result in enumerate(results, 1)]
         evidence = "\n\n".join(
             f"[{citation.number}] {citation.excerpt}" for citation in citations
@@ -90,7 +100,11 @@ class GroundedAnswerService:
             try:
                 generated = self.generator.generate(
                     self._generation_question(clean_question, clean_history),
-                    [citation.excerpt for citation in citations],
+                    [
+                        f"来源文件：{citation.filename}\n位置：{citation.section_title}\n内容：{citation.excerpt}"
+                        for citation in citations
+                    ],
+                    TEACHING_INSTRUCTIONS,
                 )
                 return GroundedAnswer(
                     question=clean_question,

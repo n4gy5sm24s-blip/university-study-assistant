@@ -270,6 +270,69 @@ class RetrievalRepository:
             ).fetchall()
         return [SearchResult(**dict(row)) for row in rows]
 
+    def expand_course_context(
+        self,
+        course_id: int,
+        anchors: list[SearchResult],
+        radius: int = 2,
+        limit: int = 7,
+    ) -> list[SearchResult]:
+        """Add nearby slides and chapter objectives around the strongest result."""
+        if not anchors:
+            return []
+        safe_limit = max(1, min(limit, 10))
+        selected: list[SearchResult] = []
+        seen: set[int] = set()
+
+        def add(result: SearchResult) -> None:
+            if result.chunk_id not in seen and len(selected) < safe_limit:
+                selected.append(result)
+                seen.add(result.chunk_id)
+
+        # Exact references can have both an image slide and a later text alternative.
+        for anchor in anchors[:2]:
+            add(anchor)
+
+        primary_document = anchors[0].document_id
+        anchor_sequences = [
+            item.sequence for item in anchors[:2] if item.document_id == primary_document
+        ]
+        with connect(self.database) as connection:
+            placeholders = " OR ".join(
+                "(c.sequence BETWEEN ? AND ?)" for _ in anchor_sequences
+            )
+            parameters: list[object] = [course_id, primary_document]
+            for sequence in anchor_sequences:
+                parameters.extend([max(0, sequence - radius), sequence + radius])
+            rows = connection.execute(
+                f"""
+                SELECT c.id AS chunk_id, c.document_id, d.filename,
+                       c.section_title, c.sequence, c.content, 0.0 AS score
+                FROM chunks c
+                JOIN source_documents d ON d.id = c.document_id
+                WHERE c.course_id = ? AND c.document_id = ? AND ({placeholders})
+                ORDER BY c.sequence
+                """,
+                parameters,
+            ).fetchall()
+            objective = connection.execute(
+                """
+                SELECT c.id AS chunk_id, c.document_id, d.filename,
+                       c.section_title, c.sequence, c.content, 0.0 AS score
+                FROM chunks c
+                JOIN source_documents d ON d.id = c.document_id
+                WHERE c.course_id = ? AND c.document_id = ?
+                  AND lower(c.section_title) LIKE '%learning objectives%'
+                ORDER BY c.sequence LIMIT 1
+                """,
+                (course_id, primary_document),
+            ).fetchone()
+        for row in rows:
+            add(SearchResult(**dict(row)))
+        if objective is not None:
+            add(SearchResult(**dict(objective)))
+        return selected
+
     def list_course_chunks(self, course_id: int, limit: int = 50) -> list[SearchResult]:
         safe_limit = max(1, min(limit, 100))
         with connect(self.database) as connection:
