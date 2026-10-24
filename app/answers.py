@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import re
 
 from .generation import AnswerGenerator, generator_from_environment
 from .retrieval import RetrievalRepository, SearchResult
+
+
+_FOLLOW_UP = re.compile(
+    r"^(?:继续|接着|再讲|展开|详细|简单点|再举)|"
+    r"它|这(?:个|张|两种|些)?|那(?:个|张|些)?|两种|前者|后者|上面|刚才|不就是|区别|例子|什么意思"
+)
 
 
 @dataclass(frozen=True)
@@ -53,11 +60,18 @@ class GroundedAnswerService:
             else generator
         )
 
-    def answer(self, course_id: int, question: str) -> GroundedAnswer:
+    def answer(
+        self,
+        course_id: int,
+        question: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> GroundedAnswer:
         clean_question = question.strip()
         if len(clean_question) < 3:
             raise QuestionValidationError("问题至少需要 3 个字符")
-        results = self.retrieval.search(course_id, clean_question, limit=3)
+        clean_history = self._clean_history(history or [])
+        retrieval_query = self._retrieval_query(clean_question, clean_history)
+        results = self.retrieval.search(course_id, retrieval_query, limit=3)
         if not results:
             return GroundedAnswer(
                 question=clean_question,
@@ -75,7 +89,7 @@ class GroundedAnswerService:
         if self.generator is not None:
             try:
                 generated = self.generator.generate(
-                    clean_question,
+                    self._generation_question(clean_question, clean_history),
                     [citation.excerpt for citation in citations],
                 )
                 return GroundedAnswer(
@@ -95,6 +109,36 @@ class GroundedAnswerService:
                 "extractive_fallback" if generation_failed else "extractive"
             ),
             citations=citations,
+        )
+
+    @staticmethod
+    def _clean_history(history: list[dict[str, str]]) -> list[dict[str, str]]:
+        cleaned: list[dict[str, str]] = []
+        for message in history[-6:]:
+            role = str(message.get("role", "")).strip()
+            content = str(message.get("content", "")).strip()
+            if role in {"user", "assistant"} and content:
+                cleaned.append({"role": role, "content": content[:3000]})
+        return cleaned
+
+    @staticmethod
+    def _retrieval_query(question: str, history: list[dict[str, str]]) -> str:
+        if not history or not (_FOLLOW_UP.search(question) or len(question) <= 12):
+            return question
+        previous_users = [item["content"] for item in history if item["role"] == "user"]
+        return f"{previous_users[-1]} {question}" if previous_users else question
+
+    @staticmethod
+    def _generation_question(question: str, history: list[dict[str, str]]) -> str:
+        if not history:
+            return question
+        transcript = "\n".join(
+            f"{'学生' if item['role'] == 'user' else '助手'}：{item['content']}"
+            for item in history
+        )
+        return (
+            f"最近对话：\n{transcript}\n\n当前问题：{question}\n"
+            "请结合最近对话理解指代，但事实仍只能依据本次提供的课程资料。"
         )
 
     @staticmethod

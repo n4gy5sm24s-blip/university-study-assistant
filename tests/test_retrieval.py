@@ -92,6 +92,32 @@ class RetrievalRepositoryTests(unittest.TestCase):
         self.assertTrue(all("4.9" in result.section_title for result in results))
         self.assertEqual(self.retrieval.search(course.id, "exhibit 4.8"), [])
 
+    def test_chapter_and_slide_reference_returns_exact_ppt_page(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "BATE_2025R_Ch04_notes.md",
+            "# 第 32 张：Corporate Strategy\n公司层战略。\n\n"
+            "# 第 33 张：Business Strategy\nLow-cost strategy and differentiation strategy.\n\n"
+            "# 第 34 张：Functional Strategy\n职能战略。",
+        )
+        for query in ("Ch04的第33张ppt", "Ch04 第33页", "slide 33"):
+            results = self.retrieval.search(course.id, query)
+            self.assertEqual(len(results), 1)
+            self.assertIn("Business Strategy", results[0].section_title)
+
+    def test_english_title_search_keeps_word_boundaries(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "chapter4.md",
+            "# Corporate Strategy\n公司层战略。\n\n"
+            "# Business Strategy\nLow-cost strategy and differentiation strategy.",
+        )
+        results = self.retrieval.search(course.id, "讲到 business strategy 这张ppt")
+        self.assertTrue(results)
+        self.assertEqual(results[0].section_title, "Business Strategy")
+
 
 if __name__ == "__main__":
     unittest.main()

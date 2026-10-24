@@ -10,6 +10,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHECK_ROOT = PROJECT_ROOT / "tests" / ".tmp" / uuid4().hex
 CHECK_ROOT.mkdir(parents=True)
 os.environ["STUDY_ASSISTANT_DB"] = str(CHECK_ROOT / "integration.db")
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_MODEL"] = ""
 
 from app.main import (  # noqa: E402
     AssignmentCreate,

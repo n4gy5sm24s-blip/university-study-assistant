@@ -18,6 +18,12 @@ _EXHIBIT_REFERENCE = re.compile(
     r"(?<![A-Za-z])exhibit\s*([0-9]+)\s*[.．·_-]\s*([0-9]+)(?![0-9])",
     re.IGNORECASE,
 )
+_SLIDE_REFERENCE = re.compile(
+    r"(?:(?:ch(?:apter)?\s*0*([0-9]+)|第\s*0*([0-9]+)\s*章)\s*(?:的|[-_:/\\ ]*)?)?"
+    r"(?:第\s*0*([0-9]+)\s*(?:张|页)(?:\s*(?:ppt|幻灯片))?|"
+    r"(?:slide|ppt)\s*0*([0-9]+))",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -53,7 +59,9 @@ def build_fts_query(query: str) -> str:
     compact = _QUERY_NOISE.sub("", query.strip())
     if len(compact) < 3:
         compact = re.sub(r"\s+", "", query.strip())
-    terms = [compact]
+    english_words = re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", query)
+    english_phrase = " ".join(english_words)
+    terms = [english_phrase, *english_words, compact]
     if len(compact) > 3:
         terms.extend(compact[index : index + 3] for index in range(len(compact) - 2))
     unique_terms = list(dict.fromkeys(term for term in terms if len(term) >= 3))
@@ -166,6 +174,13 @@ class RetrievalRepository:
         if exhibit:
             reference = f"exhibit {exhibit.group(1)}.{exhibit.group(2)}"
             return self._search_exact_reference(course_id, reference, safe_limit)
+        slide = _SLIDE_REFERENCE.search(clean_query)
+        if slide:
+            chapter = next((value for value in slide.groups()[:2] if value), None)
+            slide_number = next(value for value in slide.groups()[2:] if value)
+            return self._search_exact_slide(
+                course_id, int(slide_number), int(chapter) if chapter else None, safe_limit
+            )
         fts_query = build_fts_query(clean_query)
         with connect(self.database) as connection:
             course = connection.execute(
@@ -214,6 +229,44 @@ class RetrievalRepository:
                 LIMIT ?
                 """,
                 (course_id, pattern, pattern, limit),
+            ).fetchall()
+        return [SearchResult(**dict(row)) for row in rows]
+
+    def _search_exact_slide(
+        self, course_id: int, slide_number: int, chapter: int | None, limit: int
+    ) -> list[SearchResult]:
+        title_pattern = f"%第 {slide_number} 张：%"
+        chapter_patterns = (
+            [f"%ch{chapter:02d}%", f"%ch{chapter}%", f"%chapter{chapter:02d}%", f"%chapter{chapter}%"]
+            if chapter is not None
+            else []
+        )
+        with connect(self.database) as connection:
+            course = connection.execute(
+                "SELECT id FROM courses WHERE id = ?", (course_id,)
+            ).fetchone()
+            if course is None:
+                raise SearchCourseNotFoundError(f"课程 {course_id} 不存在")
+            parameters: list[object] = [course_id, title_pattern]
+            chapter_filter = ""
+            if chapter_patterns:
+                chapter_filter = " AND (" + " OR ".join(
+                    "lower(d.filename) LIKE ?" for _ in chapter_patterns
+                ) + ")"
+                parameters.extend(chapter_patterns)
+            parameters.append(limit)
+            rows = connection.execute(
+                f"""
+                SELECT c.id AS chunk_id, c.document_id, d.filename,
+                       c.section_title, c.sequence, c.content, 0.0 AS score
+                FROM chunks c
+                JOIN source_documents d ON d.id = c.document_id
+                WHERE c.course_id = ? AND c.section_title LIKE ?
+                {chapter_filter}
+                ORDER BY c.id
+                LIMIT ?
+                """,
+                parameters,
             ).fetchall()
         return [SearchResult(**dict(row)) for row in rows]
 

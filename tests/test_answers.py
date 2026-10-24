@@ -22,6 +22,17 @@ class FailingGenerator:
         raise RuntimeError("temporary failure")
 
 
+class CapturingGenerator:
+    method_name = "capturing_generator"
+
+    def __init__(self) -> None:
+        self.question = ""
+
+    def generate(self, question: str, evidence: list[str]) -> str:
+        self.question = question
+        return "第33张介绍低成本战略和差异化战略。[1]"
+
+
 class GroundedAnswerServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).parent / ".tmp" / uuid4().hex
@@ -103,6 +114,37 @@ class GroundedAnswerServiceTests(unittest.TestCase):
         self.assertIn("Exhibit 4.9", result.answer)
         self.assertEqual(result.citations[0].section_title, "Exhibit 4.9 SWOT - Text Alternative")
         self.assertEqual(result.grounding_status, "grounded")
+
+    def test_follow_up_uses_recent_context_and_exact_slide(self) -> None:
+        course = self.courses.create("管理学")
+        self.documents.create(
+            course.id,
+            "BATE_2025R_Ch04_notes.md",
+            "# 第 33 张：Business Strategy\nLow-cost strategy and differentiation strategy.",
+        )
+        generator = CapturingGenerator()
+        service = GroundedAnswerService(
+            self.database, generator=generator, use_environment_generator=False
+        )
+        history = [
+            {"role": "user", "content": "讲到 business strategy 这张ppt"},
+            {"role": "assistant", "content": "没有找到那一页。"},
+        ]
+        result = service.answer(course.id, "Ch04的第33张ppt不就是吗", history)
+        self.assertEqual(result.citations[0].section_title, "第 33 张：Business Strategy")
+        self.assertIn("最近对话", generator.question)
+        self.assertIn("business strategy", generator.question)
+
+        follow_up = service.answer(
+            course.id,
+            "这两种有什么区别？再举个简单例子",
+            [
+                {"role": "user", "content": "Ch04的第33张ppt不就是Business Strategy吗"},
+                {"role": "assistant", "content": result.answer},
+            ],
+        )
+        self.assertEqual(follow_up.citations[0].section_title, "第 33 张：Business Strategy")
+        self.assertIn("这两种有什么区别", generator.question)
 
 
 if __name__ == "__main__":

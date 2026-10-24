@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
-const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map(), assignments: [], activeAssignment: null };
+const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map(), assignments: [], activeAssignment: null, chatHistory: [] };
 const modeCopy = {
   draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
@@ -63,6 +63,7 @@ function renderCourses() {
 }
 
 function selectCourse(course) {
+  if (state.selectedCourse?.id !== course?.id) state.chatHistory = [];
   state.selectedCourse = course;
   $("#active-course-name").textContent = course?.name || "选择一门课程";
   $("#active-course-detail").textContent = course?.description || (course ? "课程工作区" : "创建课程后开始写作业");
@@ -212,9 +213,15 @@ async function submitPrompt() {
     let result;
     if (state.mode === "ask") {
       result = await api(`/api/courses/${state.selectedCourse.id}/questions`, {
-        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({question: prompt})
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({question: prompt, history: state.chatHistory.slice(-6)})
       });
       addMessage("assistant", result.answer, result.citations, generationLabel(result.generation_method));
+      state.chatHistory.push(
+        {role: "user", content: prompt},
+        {role: "assistant", content: result.answer}
+      );
+      state.chatHistory = state.chatHistory.slice(-6);
     } else {
       result = await api(`/api/courses/${state.selectedCourse.id}/homework-guidance`, {
         method: "POST", headers: {"Content-Type": "application/json"},

@@ -67,6 +67,7 @@ class DocumentCreate(BaseModel):
 
 class QuestionCreate(BaseModel):
     question: str = Field(min_length=3, max_length=2000)
+    history: list[dict[str, str]] = Field(default_factory=list, max_length=6)
 
 
 class HomeworkCreate(BaseModel):
@@ -283,7 +284,7 @@ def search_course(course_id: int, q: str, limit: int = 10) -> list[dict[str, obj
 @app.post("/api/courses/{course_id}/questions")
 def ask_course(course_id: int, payload: QuestionCreate) -> dict[str, object]:
     try:
-        return answer_service.answer(course_id, payload.question).to_dict()
+        return answer_service.answer(course_id, payload.question, payload.history).to_dict()
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (QuestionValidationError, SearchValidationError) as error:
