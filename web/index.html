@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>Coursework AI</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261023-6" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261024-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -16,7 +16,7 @@
         <nav class="course-list" id="course-list"></nav>
         <div class="sidebar-label assignment-label">作业项目</div>
         <nav class="assignment-list" id="assignment-list"><p class="sidebar-empty">选择课程后显示历史作业。</p></nav>
-        <div class="sidebar-footer"><span class="status-dot"></span><div><strong>本地运行</strong><span>资料保存在这台电脑</span></div></div>
+        <button class="sidebar-footer" id="model-open" type="button"><span class="status-dot offline" id="model-status-dot"></span><div><strong id="model-status-title">AI 模型未接入</strong><span id="model-status-detail">点击完成本机配置</span></div></button>
       </aside>
 
       <main class="workspace">
@@ -161,8 +161,20 @@
       </form>
     </dialog>
 
+    <dialog id="model-dialog">
+      <form class="dialog-card" id="model-form">
+        <div class="dialog-header"><div><span>AI CONNECTION</span><h2>接入 AI 模型</h2></div><button class="close-button" type="button" data-close="model-dialog" aria-label="关闭">×</button></div>
+        <p class="dialog-intro">密钥只写入这台电脑的 <code>.env</code>，不会显示在页面、回答或提交到 GitHub。提问时只发送当前问题和最多三个相关资料片段。</p>
+        <label>OpenAI API Key<input id="model-api-key" type="password" autocomplete="off" placeholder="sk-…" /></label>
+        <label>模型 ID<input id="model-name" value="gpt-6-luna" required /></label>
+        <p class="form-message" id="model-message"></p>
+        <button class="primary-button" type="submit">保存并启用</button>
+        <a class="settings-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">前往 OpenAI 创建 API Key ↗</a>
+      </form>
+    </dialog>
+
     <div class="sidebar-scrim" id="sidebar-scrim"></div>
     <div class="context-scrim" id="context-scrim"></div>
-    <script src="/static/app.js?v=20261023-6"></script>
+    <script src="/static/app.js?v=20261024-1"></script>
   </body>
 </html>

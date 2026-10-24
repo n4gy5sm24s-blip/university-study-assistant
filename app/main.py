@@ -21,6 +21,12 @@ from .documents import (
     DuplicateDocumentError,
 )
 from .homework import HomeworkService, HomeworkValidationError
+from .model_config import (
+    DEFAULT_MODEL,
+    ModelConfigurationError,
+    model_status,
+    save_model_configuration,
+)
 from .retrieval import (
     RetrievalRepository,
     SearchCourseNotFoundError,
@@ -101,6 +107,11 @@ class CoursePreferencesUpdate(BaseModel):
     teacher_requirements: str = Field(default="", max_length=3000)
 
 
+class ModelConfigurationUpdate(BaseModel):
+    api_key: str = Field(default="", max_length=500)
+    model: str = Field(default=DEFAULT_MODEL, min_length=1, max_length=120)
+
+
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")
@@ -109,6 +120,24 @@ def home() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/model")
+def get_model_configuration() -> dict[str, object]:
+    return model_status().to_dict()
+
+
+@app.put("/api/model")
+def update_model_configuration(payload: ModelConfigurationUpdate) -> dict[str, object]:
+    global answer_service, homework_service, review_coach_service
+    try:
+        current = save_model_configuration(BASE_DIR / ".env", payload.api_key, payload.model)
+    except ModelConfigurationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    answer_service = GroundedAnswerService()
+    homework_service = HomeworkService()
+    review_coach_service = ReviewCoachService()
+    return current.to_dict()
 
 
 @app.get("/api/courses")

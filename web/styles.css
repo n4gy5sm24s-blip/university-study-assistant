@@ -32,11 +32,15 @@ button { color: inherit; }
 .assignment-item small { margin-top: 3px; color: #5f5f5f; font-size: .62rem; }
 .assignment-status { width: 6px; height: 6px; border-radius: 50%; background: #696969; }
 .assignment-status.complete { background: #58ca84; box-shadow: 0 0 8px rgba(88,202,132,.35); }
-.sidebar-footer { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 13px 9px 2px; border-top: 1px solid #1d1d1d; }
+.sidebar-footer { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: auto; padding: 13px 9px 2px; border: 0; border-top: 1px solid #1d1d1d; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.sidebar-footer:hover { color: #ddd; }
 .sidebar-footer strong, .sidebar-footer span { display: block; }
 .sidebar-footer strong { font-size: .75rem; font-weight: 500; }
 .sidebar-footer span { margin-top: 2px; color: #666; font-size: .68rem; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #58ca84; box-shadow: 0 0 10px rgba(88, 202, 132, .45); }
+.status-dot.offline { background: #777; box-shadow: none; }
+.settings-link { color: #a8a8a8; font-size: .8rem; text-align: center; text-decoration: none; }
+.settings-link:hover { color: #fff; }
 .workspace { display: grid; grid-template-rows: 64px 1fr auto; min-width: 0; height: 100vh; background: #000; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 26px; border-bottom: 1px solid #181818; background: rgba(0, 0, 0, .9); backdrop-filter: blur(16px); }
 .course-heading strong, .course-heading span { display: block; }

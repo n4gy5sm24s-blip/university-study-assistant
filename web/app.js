@@ -26,6 +26,20 @@ async function api(url, options = {}) {
   return body;
 }
 
+async function loadModelStatus() {
+  try {
+    const status = await api("/api/model");
+    $("#model-status-dot").classList.toggle("offline", !status.configured);
+    $("#model-status-title").textContent = status.configured ? "AI 模型已接入" : "AI 模型未接入";
+    $("#model-status-detail").textContent = status.configured ? status.model : "点击完成本机配置";
+    $("#model-name").value = status.model;
+    return status;
+  } catch (error) {
+    $("#model-status-detail").textContent = error.message;
+    return null;
+  }
+}
+
 async function loadCourses(preferredId = null) {
   state.courses = await api("/api/courses");
   renderCourses();
@@ -533,9 +547,35 @@ $("#review-result").addEventListener("click", async event => {
 });
 
 $$("[data-close]").forEach(button => button.addEventListener("click", () => $(`#${button.dataset.close}`).close()));
+
+$("#model-open").addEventListener("click", async () => {
+  const status = await loadModelStatus();
+  $("#model-api-key").value = "";
+  $("#model-api-key").placeholder = status?.configured ? "已保存；留空可继续使用" : "sk-…";
+  $("#model-message").textContent = status?.configured ? `当前已启用 ${status.model}` : "首次启用需要填写 API Key。";
+  $("#model-dialog").showModal();
+});
+
+$("#model-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("#model-message").textContent = "正在保存本机配置…";
+  try {
+    const status = await api("/api/model", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({api_key: $("#model-api-key").value, model: $("#model-name").value})
+    });
+    $("#model-api-key").value = "";
+    $("#model-message").textContent = `已启用 ${status.model}。下一次提问会使用 AI 生成。`;
+    await loadModelStatus();
+  } catch (error) {
+    $("#model-message").textContent = error.message;
+  }
+});
 $("#menu-button").addEventListener("click", () => { $("#sidebar").classList.add("open"); $("#sidebar-scrim").classList.add("open"); });
 $("#sidebar-scrim").addEventListener("click", closeSidebar);
 $("#context-open").addEventListener("click", () => { $("#context-panel").classList.add("open"); $("#context-scrim").classList.add("open"); });
 $("#context-scrim").addEventListener("click", () => { $("#context-panel").classList.remove("open"); $("#context-scrim").classList.remove("open"); });
 
+loadModelStatus();
 loadCourses().catch(error => { $("#course-list").innerHTML = `<p class="sidebar-empty">${escapeHtml(error.message)}</p>`; });
