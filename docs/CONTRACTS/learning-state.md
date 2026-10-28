@@ -13,3 +13,9 @@
 请求：`{"status": "mastered"}` 或 `{"status": "review"}`。也允许恢复为 `learning`。
 
 删除资料时级联删除源自该资料的学习记录；删除课程时删除该课程全部学习记录。
+
+## 考前急救联动
+
+- 创建复习计划时，`review` 状态的主题自动优先。
+- 闭卷回答经课程资料纠错后返回 `mastered`、`developing` 或 `review`。
+- 三种判断分别写回 `mastered`、`learning`、`review`；`review` 主题在当前复习轮次末尾追加一次再测。

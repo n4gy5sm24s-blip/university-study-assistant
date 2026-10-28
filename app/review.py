@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import re
 
 from .answers import Citation
 from .generation import AnswerGenerator, generator_from_environment
+from .learning_state import LearningStateRepository
 from .retrieval import RetrievalRepository, SearchResult
 
 
@@ -42,6 +44,7 @@ class ReviewFeedback:
     feedback: str
     status: str
     generation_method: str
+    mastery_status: str
     citation: Citation
 
     def to_dict(self) -> dict[str, object]:
@@ -56,6 +59,7 @@ class ReviewCoachService:
         use_environment_generator: bool = True,
     ) -> None:
         self.retrieval = RetrievalRepository(database)
+        self.learning = LearningStateRepository(database)
         self.generator = (
             generator_from_environment()
             if generator is None and use_environment_generator
@@ -81,10 +85,26 @@ class ReviewCoachService:
                     (
                         "你正在带学生考前复习。先指出回答中正确的部分，再指出遗漏或错误，"
                         "最后给出一段不超过120字的参考回答。只依据课程资料，语气直接清楚。"
+                        "在回答最后单独输出 [[MASTERY: mastered]]、[[MASTERY: developing]] "
+                        "或 [[MASTERY: review]]。只有回答准确覆盖核心定义和作用时才用 mastered；"
+                        "有部分理解但存在遗漏用 developing；关键理解错误或内容太少用 review。"
                     ),
                 )
+                mastery = self._extract_mastery(feedback)
+                clean_feedback = re.sub(
+                    r"\s*\[\[MASTERY:\s*(?:mastered|developing|review)\s*\]\]\s*$",
+                    "",
+                    feedback,
+                    flags=re.IGNORECASE,
+                ).strip()
+                self._record_result(course_id, results[0], clean_topic, clean_answer, mastery)
                 return ReviewFeedback(
-                    clean_topic, feedback, "reviewed", self.generator.method_name, citation
+                    clean_topic,
+                    clean_feedback,
+                    "reviewed",
+                    self.generator.method_name,
+                    mastery,
+                    citation,
                 )
             except Exception:
                 pass
@@ -95,12 +115,48 @@ class ReviewCoachService:
         )
         if len(clean_answer) < 20:
             feedback = "你的回答还比较短，至少需要说清核心概念和它的作用。\n\n" + feedback
-        return ReviewFeedback(clean_topic, feedback, "reviewed", "extractive", citation)
+        mastery = "review" if len(clean_answer) < 40 else "developing"
+        self._record_result(course_id, results[0], clean_topic, clean_answer, mastery)
+        return ReviewFeedback(
+            clean_topic, feedback, "reviewed", "extractive", mastery, citation
+        )
+
+    @staticmethod
+    def _extract_mastery(feedback: str) -> str:
+        match = re.search(
+            r"\[\[MASTERY:\s*(mastered|developing|review)\s*\]\]",
+            feedback,
+            re.IGNORECASE,
+        )
+        return match.group(1).lower() if match else "developing"
+
+    def _record_result(
+        self,
+        course_id: int,
+        result: SearchResult,
+        topic: str,
+        answer: str,
+        mastery: str,
+    ) -> None:
+        record = self.learning.record_interaction(
+            course_id,
+            result.document_id,
+            result.sequence,
+            topic,
+            f"考前急救闭卷回答：{answer[:500]}",
+        )
+        mapped_status = {
+            "mastered": "mastered",
+            "developing": "learning",
+            "review": "review",
+        }[mastery]
+        self.learning.update_status(course_id, record.id, mapped_status)
 
 
 class ReviewPlanService:
     def __init__(self, database: Path | None = None) -> None:
         self.retrieval = RetrievalRepository(database)
+        self.learning = LearningStateRepository(database)
 
     def create_plan(
         self,
@@ -121,6 +177,12 @@ class ReviewPlanService:
             candidates.extend(
                 self.retrieval.search(course_id, clean_weak_topics, limit=10)
             )
+        persisted_weak = [
+            item for item in self.learning.summary(course_id)["records"]
+            if item["status"] == "review"
+        ]
+        for item in persisted_weak:
+            candidates.extend(self.retrieval.search(course_id, str(item["topic"]), limit=1))
         if not self._is_all_scope(clean_scope):
             scope_results = self.retrieval.search(course_id, clean_scope, limit=20)
             if not scope_results:
@@ -152,14 +214,16 @@ class ReviewPlanService:
         ]
         assumptions = [
             "计划只依据已上传资料的章节覆盖，不代表教师公布的考试权重。",
-            "薄弱点优先排列；未提供薄弱点时按资料出现顺序安排。",
+            "手动填写和学习记录中标记为待复习的主题优先排列。",
             "最后约 30% 时间用于自测和回顾。",
         ]
+        personalized = len(persisted_weak)
         return ReviewPlan(
             "ready",
             clean_scope,
             total_minutes,
-            f"共安排 {len(blocks)} 个复习块，覆盖 {len(citations)} 个资料主题。",
+            f"共安排 {len(blocks)} 个复习块，覆盖 {len(citations)} 个资料主题；"
+            f"其中 {personalized} 个来自你的待复习记录。",
             assumptions,
             blocks,
             self_test,

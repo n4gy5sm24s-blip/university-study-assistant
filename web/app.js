@@ -535,13 +535,13 @@ $("#review-form").addEventListener("submit", async event => {
     const result = await api(`/api/courses/${state.selectedCourse.id}/review-plans`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({scope: $("#review-scope").value, available_hours: Number($("#review-hours").value), weak_topics: $("#weak-topics").value})});
     if (result.status !== "ready") { $("#review-message").textContent = result.overview; return; }
     $("#review-message").textContent = "";
-    state.reviewSession = {citations: result.citations, questions: result.self_test, index: 0};
+    state.reviewSession = {citations: result.citations, questions: result.self_test, index: 0, retryKeys: new Set()};
     $("#review-form").classList.add("hidden");
     renderCoachStep();
   } catch (error) { $("#review-message").textContent = error.message; }
 });
 
-function renderCoachStep(feedback = "") {
+function renderCoachStep(feedback = "", mastery = "") {
   const session = state.reviewSession;
   if (!session || session.index >= session.citations.length) {
     $("#review-result").innerHTML = `
@@ -565,7 +565,7 @@ function renderCoachStep(feedback = "") {
       <textarea id="coach-answer" rows="4" placeholder="不要看上面的资料，用自己的话回答…">${escapeHtml(session.lastAnswer || "")}</textarea>
       <button class="primary-button" data-coach-submit type="button">提交回答并纠错</button>
     </section>
-    ${feedback ? `<section class="coach-feedback"><span>纠错反馈</span><p>${escapeHtml(feedback)}</p><button class="primary-button" data-coach-next type="button">进入下一个知识点</button></section>` : ""}
+    ${feedback ? `<section class="coach-feedback"><span>纠错反馈</span><div class="mastery-badge ${escapeHtml(mastery)}">${mastery === "mastered" ? "已掌握" : mastery === "review" ? "需要复习 · 本轮稍后再测" : "正在掌握"}</div><p>${escapeHtml(feedback)}</p><button class="primary-button" data-coach-next type="button">进入下一个知识点</button></section>` : ""}
   `;
   if (feedback) {
     $("#coach-answer").disabled = true;
@@ -585,9 +585,16 @@ $("#review-result").addEventListener("click", async event => {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({topic, answer})
       });
+      const retryKey = `${citation.document_id}-${citation.sequence}`;
+      if (result.mastery_status === "review" && !state.reviewSession.retryKeys.has(retryKey)) {
+        state.reviewSession.retryKeys.add(retryKey);
+        state.reviewSession.citations.push(citation);
+        state.reviewSession.questions.push(`再次闭卷回答“${topic}”：这次请补上刚才遗漏的核心定义、作用和例子。`);
+      }
       state.reviewSession.lastAnswer = answer;
       $("#review-message").textContent = "";
-      renderCoachStep(result.feedback);
+      renderCoachStep(result.feedback, result.mastery_status);
+      await loadLearningProgress();
     } catch (error) { $("#review-message").textContent = error.message; }
   }
   if (event.target.closest("[data-coach-next]")) {
@@ -598,6 +605,7 @@ $("#review-result").addEventListener("click", async event => {
   if (event.target.closest("[data-review-restart]")) {
     state.reviewSession.index = 0;
     state.reviewSession.lastAnswer = "";
+    state.reviewSession.retryKeys = new Set();
     renderCoachStep();
   }
 });

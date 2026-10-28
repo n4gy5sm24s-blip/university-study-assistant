@@ -5,7 +5,16 @@ from uuid import uuid4
 
 from app.courses import CourseRepository
 from app.documents import DocumentRepository
+from app.learning_state import LearningStateRepository
+from app.retrieval import RetrievalRepository
 from app.review import ReviewCoachService, ReviewPlanService, ReviewValidationError
+
+
+class MasteryGenerator:
+    method_name = "mastery_generator"
+
+    def generate(self, question: str, evidence: list[str], task_instructions: str = "") -> str:
+        return "定义准确，也说明了团队成员敢于提问的作用。\n[[MASTERY: mastered]]"
 
 
 class ReviewPlanServiceTests(unittest.TestCase):
@@ -16,7 +25,7 @@ class ReviewPlanServiceTests(unittest.TestCase):
         self.courses = CourseRepository(self.database)
         self.documents = DocumentRepository(self.database, self.root / "uploads")
         self.course = self.courses.create("管理学")
-        self.documents.create(
+        self.document = self.documents.create(
             self.course.id,
             "review.md",
             "# 竞争优势\n竞争优势来自成本领先或差异化能力。\n\n"
@@ -24,6 +33,7 @@ class ReviewPlanServiceTests(unittest.TestCase):
             "# 团队规范\n团队规范是成员对可接受行为的共同预期。",
         )
         self.service = ReviewPlanService(self.database)
+        self.learning = LearningStateRepository(self.database)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -41,6 +51,20 @@ class ReviewPlanServiceTests(unittest.TestCase):
             self.course.id, "全部内容", 1, "心理安全"
         )
         self.assertEqual(plan.blocks[0].topic, "心理安全")
+
+    def test_persisted_review_topic_is_scheduled_first(self) -> None:
+        chunk = RetrievalRepository(self.database).search(self.course.id, "团队规范")[0]
+        record = self.learning.record_interaction(
+            self.course.id,
+            self.document.id,
+            chunk.sequence,
+            chunk.section_title,
+            "团队规范没听懂",
+        )
+        self.learning.update_status(self.course.id, record.id, "review")
+        plan = self.service.create_plan(self.course.id, "全部内容", 1)
+        self.assertEqual(plan.blocks[0].topic, "团队规范")
+        self.assertIn("1 个来自你的待复习记录", plan.overview)
 
     def test_unknown_scope_returns_no_evidence(self) -> None:
         plan = self.service.create_plan(self.course.id, "量子力学", 1)
@@ -76,6 +100,22 @@ class ReviewPlanServiceTests(unittest.TestCase):
         self.assertEqual(result.generation_method, "extractive")
         self.assertEqual(result.citation.section_title, "心理安全")
         self.assertIn("参考依据", result.feedback)
+        self.assertEqual(result.mastery_status, "review")
+
+    def test_model_mastery_updates_learning_state_and_removes_marker(self) -> None:
+        coach = ReviewCoachService(
+            self.database, generator=MasteryGenerator(), use_environment_generator=False
+        )
+        result = coach.evaluate(
+            self.course.id,
+            "心理安全",
+            "心理安全让成员敢于提出问题和承认错误，因此团队能更早发现风险。",
+        )
+        self.assertEqual(result.mastery_status, "mastered")
+        self.assertNotIn("MASTERY", result.feedback)
+        summary = self.learning.summary(self.course.id)
+        record = next(item for item in summary["records"] if item["topic"] == "心理安全")
+        self.assertEqual(record["status"], "mastered")
 
     def test_coach_rejects_unknown_topic(self) -> None:
         coach = ReviewCoachService(
