@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Coursework AI</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header><strong>Coursework AI</strong><span>Chrome Companion</span></header>
+    <label>使用课程<select id="course"></select></label>
+    <p class="notice">只有点击下方按钮后才读取当前标签页。优先使用你选中的文字，否则读取页面可见文字。启用 AI 后，这些题目文字会由本地作业机发送给已配置的模型。</p>
+    <button id="analyze" class="primary">读取当前页面并生成草稿</button>
+    <p id="status"></p>
+    <article id="result" hidden></article>
+    <div class="actions" hidden id="actions">
+      <button id="copy">复制草稿</button>
+      <button id="open">打开作业机</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

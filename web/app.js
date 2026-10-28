@@ -434,8 +434,7 @@ function clearHomeworkImage() {
   $("#image-preview").classList.add("hidden");
 }
 
-$("#homework-image").addEventListener("change", event => {
-  const file = event.target.files[0];
+function setHomeworkImage(file) {
   if (!file) return;
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
     $("#composer-status").textContent = "题目图片只支持 JPG、PNG 或 WebP。";
@@ -456,6 +455,54 @@ $("#homework-image").addEventListener("change", event => {
     $("#composer-status").textContent = "";
   });
   reader.readAsDataURL(file);
+}
+
+$("#homework-image").addEventListener("change", event => {
+  setHomeworkImage(event.target.files[0]);
+});
+
+async function imageFileFromTransfer(transfer) {
+  const directFile = [...(transfer.files || [])].find(file => file.type.startsWith("image/"));
+  if (directFile) return directFile;
+  const html = transfer.getData("text/html");
+  const htmlSource = html ? new DOMParser().parseFromString(html, "text/html").querySelector("img")?.src : "";
+  const source = htmlSource || transfer.getData("text/uri-list");
+  if (!source) return null;
+  try {
+    const response = await fetch(source);
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    return new File([blob], "拖入的题目图片", {type: blob.type});
+  } catch (_) {
+    throw new Error("这个网页不允许直接读取图片。可以右键复制图片后，在聊天框按 Ctrl+V。 ");
+  }
+}
+
+$("#composer-form").addEventListener("dragover", event => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+  event.currentTarget.classList.add("drag-active");
+});
+$("#composer-form").addEventListener("dragleave", event => {
+  if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove("drag-active");
+});
+$("#composer-form").addEventListener("drop", async event => {
+  event.preventDefault();
+  event.currentTarget.classList.remove("drag-active");
+  try {
+    const file = await imageFileFromTransfer(event.dataTransfer);
+    if (!file) throw new Error("没有识别到图片，请拖入 JPG、PNG 或 WebP。 ");
+    setHomeworkImage(file);
+  } catch (error) {
+    $("#composer-status").textContent = error.message;
+  }
+});
+$("#composer-form").addEventListener("paste", event => {
+  const image = [...(event.clipboardData?.files || [])].find(file => file.type.startsWith("image/"));
+  if (image) {
+    event.preventDefault();
+    setHomeworkImage(image);
+  }
 });
 $("#image-remove").addEventListener("click", clearHomeworkImage);
 

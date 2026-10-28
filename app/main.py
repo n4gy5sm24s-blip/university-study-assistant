@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -41,6 +42,12 @@ WEB_DIR = BASE_DIR / "web"
 load_dotenv(BASE_DIR / ".env")
 
 app = FastAPI(title="大学生学习助手", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^chrome-extension://[a-p]{32}$",
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 repository = CourseRepository()
 document_repository = DocumentRepository()
 retrieval_repository = RetrievalRepository()

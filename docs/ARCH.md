@@ -11,6 +11,7 @@
 - Base profile：course-centered learning workspace。
 - Capability modules：document ingestion、RAG、learning state、tutor workflow、evaluation。
 - MVP 运行方式：本地 Web 应用。
+- 可选输入端：Chrome Companion 使用 `activeTab` 在用户点击时读取当前页，调用本机 API；不持有全站读取权限，不自动提交表单。
 - 推荐技术方案：Python、FastAPI、SQLite、简单 Web UI。
 - 模型和 Embedding：通过统一接口接入，避免绑定单一供应商。
 
@@ -96,6 +97,7 @@
 - 用户资料不用于其他用户的回答。
 - 删除操作需要确认并产生可验证结果。
 - 外部模型调用前明确哪些文本会离开本机。
+- Chrome 当前页文字属于临时作业输入；扩展必须在读取前显示数据流说明，只允许 Chrome 扩展来源访问必要的本机 GET/POST API。
 - 生成模型默认关闭；启用后发送当前问题、最近最多 6 条对话消息和最多七个章节上下文片段，并使用 `store=False`。
 
 ## 十、演进路线
