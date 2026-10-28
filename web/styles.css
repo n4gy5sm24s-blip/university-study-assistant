@@ -72,6 +72,9 @@ button { color: inherit; }
 .citation-chip { padding: 6px 9px; border: 1px solid #292929; border-radius: 7px; color: #8f8f8f; background: #0c0c0c; font-size: .7rem; cursor: pointer; }
 .citation-chip:hover, .citation-chip.selected { color: #fff; border-color: #555; background: #171717; }
 .message-meta { margin-top: 10px; color: #5f5f5f; font-size: .68rem; }
+.learning-actions { display: flex; gap: 7px; margin-top: 10px; }
+.learning-action { padding: 5px 9px; border: 1px solid #292929; border-radius: 7px; color: #777; background: transparent; font-size: .68rem; cursor: pointer; }
+.learning-action:hover, .learning-action.active { color: #eee; border-color: #555; background: #171717; }
 .evidence-card { margin-top: 16px; padding: 14px 15px; border: 1px solid #333; border-radius: 12px; background: #0d0d0d; }
 .evidence-card.critical { border-color: #5a3b2e; }
 .evidence-card-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
@@ -175,6 +178,15 @@ dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .topic-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .topic-list span { max-width: 100%; overflow: hidden; padding: 5px 8px; border-radius: 7px; color: #999; background: #141414; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
 .topic-list small { color: #555; font-size: .68rem; }
+.learning-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.learning-stats div { padding: 10px; border: 1px solid #242424; border-radius: 9px; background: #0d0d0d; }
+.learning-stats strong, .learning-stats span { display: block; }
+.learning-stats strong { font-size: 1.05rem; }
+.learning-stats span { margin-top: 3px; color: #606060; font-size: .64rem; }
+.learning-topics { display: grid; gap: 5px; margin-top: 10px; }
+.learning-topics div { display: flex; justify-content: space-between; gap: 8px; color: #999; font-size: .68rem; }
+.learning-topics div span:last-child { color: #666; }
+.learning-topics small { color: #555; font-size: .68rem; }
 .workflow-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
 .workflow-list li { display: grid; grid-template-columns: 27px 1fr; align-items: center; gap: 9px; padding: 8px; border-radius: 9px; color: #545454; }
 .workflow-list li > span { font-size: .62rem; font-variant-numeric: tabular-nums; }

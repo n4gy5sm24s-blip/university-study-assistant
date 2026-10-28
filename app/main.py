@@ -21,6 +21,7 @@ from .documents import (
     DuplicateDocumentError,
 )
 from .homework import HomeworkService, HomeworkValidationError
+from .learning_state import LearningRecordNotFoundError, LearningStateRepository
 from .model_config import (
     DEFAULT_MODEL,
     ModelConfigurationError,
@@ -50,6 +51,7 @@ review_coach_service = ReviewCoachService()
 course_profile_service = CourseProfileService()
 assignment_repository = AssignmentRepository()
 course_preferences_repository = CoursePreferencesRepository()
+learning_state_repository = LearningStateRepository()
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -111,6 +113,10 @@ class CoursePreferencesUpdate(BaseModel):
 class ModelConfigurationUpdate(BaseModel):
     api_key: str = Field(default="", max_length=500)
     model: str = Field(default=DEFAULT_MODEL, min_length=1, max_length=120)
+
+
+class LearningStatusUpdate(BaseModel):
+    status: str = Field(min_length=1, max_length=20)
 
 
 @app.get("/", include_in_schema=False)
@@ -181,6 +187,28 @@ def course_profile(course_id: int) -> dict[str, object]:
         return course_profile_service.build(course_id).to_dict()
     except DocumentCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/courses/{course_id}/learning")
+def learning_summary(course_id: int) -> dict[str, object]:
+    try:
+        return learning_state_repository.summary(course_id)
+    except LearningRecordNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.patch("/api/courses/{course_id}/learning/{record_id}")
+def update_learning_status(
+    course_id: int, record_id: int, payload: LearningStatusUpdate
+) -> dict[str, object]:
+    try:
+        return learning_state_repository.update_status(
+            course_id, record_id, payload.status
+        ).to_dict()
+    except LearningRecordNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @app.get("/api/courses/{course_id}/preferences")
@@ -284,7 +312,20 @@ def search_course(course_id: int, q: str, limit: int = 10) -> list[dict[str, obj
 @app.post("/api/courses/{course_id}/questions")
 def ask_course(course_id: int, payload: QuestionCreate) -> dict[str, object]:
     try:
-        return answer_service.answer(course_id, payload.question, payload.history).to_dict()
+        result = answer_service.answer(course_id, payload.question, payload.history)
+        response = result.to_dict()
+        if result.grounding_status == "grounded" and result.citations:
+            primary = result.citations[0]
+            response["learning_record"] = learning_state_repository.record_interaction(
+                course_id,
+                primary.document_id,
+                primary.sequence,
+                primary.section_title or primary.filename,
+                payload.question,
+            ).to_dict()
+        else:
+            response["learning_record"] = None
+        return response
     except SearchCourseNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (QuestionValidationError, SearchValidationError) as error:

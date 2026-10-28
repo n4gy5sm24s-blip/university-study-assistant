@@ -99,6 +99,25 @@ def initialize(path: Path | None = None) -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS learning_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_id INTEGER NOT NULL,
+                document_id INTEGER NOT NULL,
+                sequence INTEGER NOT NULL,
+                topic TEXT NOT NULL CHECK(length(trim(topic)) > 0),
+                status TEXT NOT NULL DEFAULT 'learning'
+                    CHECK(status IN ('learning', 'mastered', 'review')),
+                interaction_count INTEGER NOT NULL DEFAULT 1,
+                last_question TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+                FOREIGN KEY (document_id) REFERENCES source_documents(id) ON DELETE CASCADE,
+                UNIQUE(course_id, document_id, sequence)
+            )
+            """
+        )
+        connection.execute(
+            """
             CREATE VIRTUAL TABLE IF NOT EXISTS chunk_search USING fts5(
                 chunk_id UNINDEXED,
                 course_id UNINDEXED,

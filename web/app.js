@@ -74,7 +74,29 @@ function selectCourse(course) {
   renderCourses();
   closeSidebar();
   loadCourseProfile();
+  loadLearningProgress();
   loadAssignments();
+}
+
+async function loadLearningProgress() {
+  if (!state.selectedCourse) {
+    $("#learning-mastered").textContent = "0";
+    $("#learning-review").textContent = "0";
+    $("#learning-topics").innerHTML = "<small>开始提问后自动记录知识点</small>";
+    return null;
+  }
+  try {
+    const summary = await api(`/api/courses/${state.selectedCourse.id}/learning`);
+    $("#learning-mastered").textContent = summary.mastered;
+    $("#learning-review").textContent = summary.review;
+    $("#learning-topics").innerHTML = summary.records.length
+      ? summary.records.slice(0, 5).map(item => `<div><span>${escapeHtml(item.topic)}</span><span>${item.status === "mastered" ? "已掌握" : item.status === "review" ? "待复习" : `学习中 · ${item.interaction_count}次`}</span></div>`).join("")
+      : "<small>开始提问后自动记录知识点</small>";
+    return summary;
+  } catch (error) {
+    $("#learning-topics").innerHTML = `<small>${escapeHtml(error.message)}</small>`;
+    return null;
+  }
 }
 
 async function loadAssignments() {
@@ -154,7 +176,7 @@ function setMode(mode) {
   $("#composer-input").focus();
 }
 
-function addMessage(role, content, citations = [], meta = "", assessment = null) {
+function addMessage(role, content, citations = [], meta = "", assessment = null, learningRecord = null) {
   $("#welcome").classList.add("hidden");
   const message = document.createElement("article");
   message.className = `message ${role}`;
@@ -171,6 +193,12 @@ function addMessage(role, content, citations = [], meta = "", assessment = null)
       ${assessment.capture_suggestions?.length ? `<h4>建议补拍</h4><ol>${assessment.capture_suggestions.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol><small>请把小节标题、正文、图表和页码一起拍清楚。</small>` : ""}
     </section>
   ` : "";
+  const learningActions = learningRecord ? `
+    <div class="learning-actions" data-learning-record="${learningRecord.id}">
+      <button class="learning-action ${learningRecord.status === "mastered" ? "active" : ""}" data-learning-status="mastered" type="button">✓ 已掌握</button>
+      <button class="learning-action ${learningRecord.status === "review" ? "active" : ""}" data-learning-status="review" type="button">↻ 需要复习</button>
+    </div>
+  ` : "";
   message.innerHTML = `
     <div class="message-avatar">${role === "user" ? "你" : "C"}</div>
     <div>
@@ -178,6 +206,7 @@ function addMessage(role, content, citations = [], meta = "", assessment = null)
       <div class="message-content">${escapeHtml(content)}</div>
       ${assessmentCard}
       ${sourceChips ? `<div class="citations">${sourceChips}</div>` : ""}
+      ${learningActions}
       ${meta ? `<div class="message-meta">${escapeHtml(meta)}</div>` : ""}
     </div>
   `;
@@ -216,7 +245,8 @@ async function submitPrompt() {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({question: prompt, history: state.chatHistory.slice(-6)})
       });
-      addMessage("assistant", result.answer, result.citations, `${generationLabel(result.generation_method)} · 章节上下文 ${result.citations.length} 页`);
+      addMessage("assistant", result.answer, result.citations, `${generationLabel(result.generation_method)} · 章节上下文 ${result.citations.length} 页`, null, result.learning_record);
+      await loadLearningProgress();
       state.chatHistory.push(
         {role: "user", content: prompt},
         {role: "assistant", content: result.answer}
@@ -252,6 +282,20 @@ async function submitPrompt() {
 }
 
 $("#message-list").addEventListener("click", event => {
+  const learningButton = event.target.closest("[data-learning-status]");
+  if (learningButton) {
+    const container = learningButton.closest("[data-learning-record]");
+    const recordId = Number(container.dataset.learningRecord);
+    api(`/api/courses/${state.selectedCourse.id}/learning/${recordId}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({status: learningButton.dataset.learningStatus})
+    }).then(() => {
+      container.querySelectorAll(".learning-action").forEach(button => button.classList.toggle("active", button === learningButton));
+      loadLearningProgress();
+    }).catch(error => { $("#composer-status").textContent = error.message; });
+    return;
+  }
   const button = event.target.closest("[data-citation-key]");
   if (!button) return;
   const citation = state.citations.get(button.dataset.citationKey);
@@ -477,7 +521,12 @@ $("#document-list").addEventListener("click", async event => {
   await loadCourseProfile();
 });
 
-$("#review-open").addEventListener("click", () => $("#review-dialog").showModal());
+$("#review-open").addEventListener("click", async () => {
+  const summary = await loadLearningProgress();
+  const weakTopics = summary?.records.filter(item => item.status === "review").map(item => item.topic) || [];
+  if (weakTopics.length) $("#weak-topics").value = weakTopics.join("、");
+  $("#review-dialog").showModal();
+});
 $("#review-form").addEventListener("submit", async event => {
   event.preventDefault();
   $("#review-message").textContent = "正在读取课程资料并安排第一轮复习…";
