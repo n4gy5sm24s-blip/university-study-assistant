@@ -10,7 +10,7 @@
 
 - Base profile：course-centered learning workspace。
 - Capability modules：document ingestion、RAG、learning state、tutor workflow、evaluation。
-- MVP 运行方式：本地 Web 应用。
+- MVP 运行方式：本地 Web 应用；Railway 可用于单用户私有演示，正式公开前必须增加认证和用户隔离。
 - 可选输入端：Chrome Companion 使用 `activeTab` 在用户点击时读取当前页，调用本机 API；不持有全站读取权限，不自动提交表单。
 - 推荐技术方案：Python、FastAPI、SQLite、简单 Web UI。
 - 模型和 Embedding：通过统一接口接入，避免绑定单一供应商。
@@ -93,6 +93,8 @@
 ## 九、隐私和安全
 
 - MVP 默认本地存储。
+- Railway 演示环境使用挂载 Volume 保存 SQLite 和上传资料；未挂载 Volume 时不承诺数据持久化。
+- Railway 环境中的模型密钥只通过环境变量注入，默认禁止网页端写入模型配置。
 - 不在日志中记录完整教材内容、用户答案或密钥。
 - 用户资料不用于其他用户的回答。
 - 删除操作需要确认并产生可验证结果。

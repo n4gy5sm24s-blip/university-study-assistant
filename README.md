@@ -55,6 +55,22 @@
 
 然后访问 http://127.0.0.1:8000。
 
+## Railway 私有演示部署
+
+仓库包含 `railway.toml`，Railway 可以从 GitHub 自动安装依赖、启动 FastAPI，并使用 `/api/health` 检查服务状态。
+
+部署时必须完成：
+
+1. 在 Railway 连接本 GitHub 仓库；
+2. 添加 Volume，挂载路径设为 `/app/data`；
+3. 在 Variables 中设置 `OPENAI_API_KEY`、`OPENAI_MODEL` 和 `ALLOW_MODEL_CONFIG_WRITE=false`；
+4. 部署成功后在 Networking 中生成域名；
+5. 先验证课程创建、PPTX 上传、问答和重启后的数据保留，再交给其他人试用。
+
+设置 Volume 后，程序自动使用 `$RAILWAY_VOLUME_MOUNT_PATH/study_assistant.db`，上传资料保存在同一持久化目录下的 `uploads/`。
+
+当前仍是单用户架构，没有登录、授权和用户数据隔离。生成的域名只能作为受控的个人演示；在增加认证与多用户隔离前，不得作为公开产品传播。Chrome Companion 仍指向本机地址，需要在取得 Railway 正式域名后单独配置。
+
 ### 可选：连接 Chrome 当前作业页面
 
 1. 保持本地作业机运行；

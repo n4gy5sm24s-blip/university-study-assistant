@@ -26,6 +26,7 @@ from .learning_state import LearningRecordNotFoundError, LearningStateRepository
 from .model_config import (
     DEFAULT_MODEL,
     ModelConfigurationError,
+    model_configuration_write_enabled,
     model_status,
     save_model_configuration,
 )
@@ -144,6 +145,11 @@ def get_model_configuration() -> dict[str, object]:
 @app.put("/api/model")
 def update_model_configuration(payload: ModelConfigurationUpdate) -> dict[str, object]:
     global answer_service, homework_service, review_coach_service
+    if not model_configuration_write_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="线上环境不允许通过网页修改模型密钥，请在部署平台配置环境变量。",
+        )
     try:
         current = save_model_configuration(BASE_DIR / ".env", payload.api_key, payload.model)
     except ModelConfigurationError as error:

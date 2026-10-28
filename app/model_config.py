@@ -24,6 +24,13 @@ class ModelConfigurationError(ValueError):
     pass
 
 
+def model_configuration_write_enabled() -> bool:
+    configured = os.environ.get("ALLOW_MODEL_CONFIG_WRITE")
+    if configured is not None:
+        return configured.strip().lower() in {"1", "true", "yes", "on"}
+    return not bool(os.environ.get("RAILWAY_ENVIRONMENT"))
+
+
 def model_status() -> ModelStatus:
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     model = os.environ.get("OPENAI_MODEL", "").strip()

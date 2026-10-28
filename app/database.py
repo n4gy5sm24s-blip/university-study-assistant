@@ -10,6 +10,9 @@ def database_path() -> Path:
     configured = os.environ.get("STUDY_ASSISTANT_DB")
     if configured:
         return Path(configured)
+    railway_volume = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+    if railway_volume:
+        return Path(railway_volume) / "study_assistant.db"
     return Path(__file__).resolve().parents[1] / "data" / "study_assistant.db"
 
 
