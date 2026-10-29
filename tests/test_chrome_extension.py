@@ -10,7 +10,7 @@ class ChromeExtensionTests(unittest.TestCase):
     def test_manifest_uses_active_tab_not_broad_browsing_access(self) -> None:
         manifest = json.loads((self.root / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["manifest_version"], 3)
-        self.assertEqual(manifest["version"], "0.3.0")
+        self.assertEqual(manifest["version"], "0.4.0")
         self.assertIn("activeTab", manifest["permissions"])
         self.assertIn("scripting", manifest["permissions"])
         self.assertNotIn("tabs", manifest["permissions"])
@@ -38,6 +38,14 @@ class ChromeExtensionTests(unittest.TestCase):
         self.assertIn('id="follow-up-form"', html)
         self.assertIn("history: history.slice(-6)", script)
         self.assertIn('followUpForm.addEventListener("submit"', script)
+
+    def test_popup_persists_conversation_for_tab_and_course(self) -> None:
+        script = (self.root / "popup.js").read_text(encoding="utf-8")
+        self.assertIn("chatSession:${tabId}:${courseId}", script)
+        self.assertIn("conversation: conversation.slice(-6)", script)
+        self.assertIn("await saveConversation()", script)
+        self.assertIn("await restoreConversation()", script)
+        self.assertIn('session.url !== (tab.url || "")', script)
 
 
 if __name__ == "__main__":

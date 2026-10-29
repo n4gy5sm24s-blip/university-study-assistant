@@ -8,6 +8,59 @@ const followUpInput = document.querySelector("#follow-up");
 const allowGeneralKnowledge = document.querySelector("#allow-general-knowledge");
 let latestDraft = "";
 let conversation = [];
+let currentTab = null;
+
+async function getActiveTab() {
+  const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+  if (!tab?.id) throw new Error("没有找到当前标签页");
+  currentTab = tab;
+  return tab;
+}
+
+function chatSessionKey(tabId, courseId) {
+  return `chatSession:${tabId}:${courseId}`;
+}
+
+function hideConversation() {
+  latestDraft = "";
+  conversation = [];
+  result.replaceChildren();
+  result.hidden = true;
+  followUpForm.hidden = true;
+  actions.hidden = true;
+}
+
+async function saveConversation() {
+  const tab = currentTab || await getActiveTab();
+  const courseId = Number(courseSelect.value);
+  const key = chatSessionKey(tab.id, courseId);
+  await chrome.storage.local.set({
+    [key]: {
+      url: tab.url || "",
+      conversation: conversation.slice(-6),
+      latestDraft,
+      updatedAt: Date.now()
+    }
+  });
+}
+
+async function restoreConversation() {
+  hideConversation();
+  const tab = await getActiveTab();
+  const courseId = Number(courseSelect.value);
+  if (!courseId) return;
+  const key = chatSessionKey(tab.id, courseId);
+  const saved = await chrome.storage.local.get(key);
+  const session = saved[key];
+  if (!session || session.url !== (tab.url || "") || !Array.isArray(session.conversation) || !session.conversation.length) return;
+  conversation = session.conversation.slice(-6);
+  latestDraft = session.latestDraft || conversation.filter(item => item.role === "assistant").at(-1)?.content || "";
+  renderConversation();
+  result.hidden = false;
+  followUpForm.hidden = false;
+  actions.hidden = false;
+  status.textContent = "已恢复这个网页上一次的问答记录。";
+}
 
 async function request(path, options = {}) {
   const response = await fetch(`${API}${path}`, options);
@@ -29,6 +82,7 @@ async function loadCourses() {
     if (saved.courseId && courses.some(course => course.id === Number(saved.courseId))) courseSelect.value = saved.courseId;
     allowGeneralKnowledge.checked = saved.allowGeneralKnowledge !== false;
     if (!courses.length) throw new Error("请先在本地作业机创建课程并上传资料");
+    await restoreConversation();
   } catch (error) {
     status.textContent = `${error.message}。请确认 http://127.0.0.1:8000 正在运行。`;
     document.querySelector("#analyze").disabled = true;
@@ -36,8 +90,7 @@ async function loadCourses() {
 }
 
 async function readCurrentPage() {
-  const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-  if (!tab?.id) throw new Error("没有找到当前标签页");
+  const tab = await getActiveTab();
   const frames = await chrome.scripting.executeScript({
     target: {tabId: tab.id, allFrames: true},
     func: () => ({
@@ -112,6 +165,7 @@ document.querySelector("#analyze").addEventListener("click", async () => {
     followUpForm.hidden = false;
     actions.hidden = false;
     showGenerationStatus(response);
+    await saveConversation();
   } catch (error) {
     status.textContent = error.message;
   }
@@ -134,6 +188,7 @@ followUpForm.addEventListener("submit", async event => {
     conversation = conversation.slice(-6);
     renderConversation();
     showGenerationStatus(response);
+    await saveConversation();
   } catch (error) {
     status.textContent = error.message;
   } finally {
@@ -147,6 +202,9 @@ document.querySelector("#copy").addEventListener("click", async () => {
   status.textContent = "草稿已复制。请在提交前检查和修改。";
 });
 document.querySelector("#open").addEventListener("click", () => chrome.tabs.create({url: `${API}/`}));
-courseSelect.addEventListener("change", () => chrome.storage.local.set({courseId: Number(courseSelect.value)}));
+courseSelect.addEventListener("change", async () => {
+  await chrome.storage.local.set({courseId: Number(courseSelect.value)});
+  await restoreConversation();
+});
 allowGeneralKnowledge.addEventListener("change", () => chrome.storage.local.set({allowGeneralKnowledge: allowGeneralKnowledge.checked}));
 loadCourses();
