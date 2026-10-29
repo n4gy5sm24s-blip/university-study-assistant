@@ -3,6 +3,7 @@ const courseSelect = document.querySelector("#course");
 const status = document.querySelector("#status");
 const result = document.querySelector("#result");
 const actions = document.querySelector("#actions");
+const allowGeneralKnowledge = document.querySelector("#allow-general-knowledge");
 let latestDraft = "";
 
 async function request(path, options = {}) {
@@ -15,7 +16,7 @@ async function request(path, options = {}) {
 async function loadCourses() {
   try {
     const courses = await request("/api/courses");
-    const saved = await chrome.storage.local.get("courseId");
+    const saved = await chrome.storage.local.get(["courseId", "allowGeneralKnowledge"]);
     courseSelect.replaceChildren(...courses.map(course => {
       const option = document.createElement("option");
       option.value = course.id;
@@ -23,6 +24,7 @@ async function loadCourses() {
       return option;
     }));
     if (saved.courseId && courses.some(course => course.id === Number(saved.courseId))) courseSelect.value = saved.courseId;
+    allowGeneralKnowledge.checked = saved.allowGeneralKnowledge !== false;
     if (!courses.length) throw new Error("请先在本地作业机创建课程并上传资料");
   } catch (error) {
     status.textContent = `${error.message}。请确认 http://127.0.0.1:8000 正在运行。`;
@@ -56,17 +58,29 @@ document.querySelector("#analyze").addEventListener("click", async () => {
   try {
     const question = await readCurrentPage();
     const courseId = Number(courseSelect.value);
-    await chrome.storage.local.set({courseId});
+    await chrome.storage.local.set({courseId, allowGeneralKnowledge: allowGeneralKnowledge.checked});
     const response = await request(`/api/courses/${courseId}/homework-guidance`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({question, mode: "draft"})
+      body: JSON.stringify({
+        question,
+        mode: "draft",
+        allow_general_knowledge: allowGeneralKnowledge.checked
+      })
     });
     latestDraft = response.guidance;
     result.textContent = latestDraft;
     result.hidden = false;
     actions.hidden = false;
-    status.textContent = response.grounding_status === "grounded" ? `已生成，引用 ${response.citations.length} 条课程依据。` : "课程资料不足，请补充相关页面。";
+    if (response.grounding_status === "grounded") {
+      status.textContent = `已生成，引用 ${response.citations.length} 条课程依据。`;
+    } else if (response.grounding_status === "general_knowledge") {
+      status.textContent = "已使用 AI 通用知识生成，未使用课程资料。";
+    } else {
+      status.textContent = allowGeneralKnowledge.checked
+        ? "未成功使用通用知识，请检查 AI 模型配置。"
+        : "课程资料不足，请补充相关页面或允许通用知识。";
+    }
   } catch (error) {
     status.textContent = error.message;
   }
@@ -78,4 +92,5 @@ document.querySelector("#copy").addEventListener("click", async () => {
 });
 document.querySelector("#open").addEventListener("click", () => chrome.tabs.create({url: `${API}/`}));
 courseSelect.addEventListener("change", () => chrome.storage.local.set({courseId: Number(courseSelect.value)}));
+allowGeneralKnowledge.addEventListener("change", () => chrome.storage.local.set({allowGeneralKnowledge: allowGeneralKnowledge.checked}));
 loadCourses();

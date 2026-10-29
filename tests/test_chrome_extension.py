@@ -24,6 +24,13 @@ class ChromeExtensionTests(unittest.TestCase):
         self.assertNotIn("submit()", script)
         self.assertNotIn("<all_urls>", manifest_text)
 
+    def test_popup_can_explicitly_enable_general_knowledge(self) -> None:
+        html = (self.root / "popup.html").read_text(encoding="utf-8")
+        script = (self.root / "popup.js").read_text(encoding="utf-8")
+        self.assertIn('id="allow-general-knowledge"', html)
+        self.assertIn("allow_general_knowledge: allowGeneralKnowledge.checked", script)
+        self.assertIn('response.grounding_status === "general_knowledge"', script)
+
 
 if __name__ == "__main__":
     unittest.main()

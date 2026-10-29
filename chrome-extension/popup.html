@@ -9,6 +9,10 @@
   <body>
     <header><strong>Coursework AI</strong><span>Chrome Companion</span></header>
     <label>使用课程<select id="course"></select></label>
+    <label class="knowledge-toggle">
+      <input id="allow-general-knowledge" type="checkbox" checked />
+      <span>资料不足时，允许 AI 使用通用知识</span>
+    </label>
     <p class="notice">只有点击下方按钮后才读取当前标签页。优先使用你选中的文字，否则读取页面可见文字。启用 AI 后，这些题目文字会由本地作业机发送给已配置的模型。</p>
     <button id="analyze" class="primary">读取当前页面并生成草稿</button>
     <p id="status"></p>
