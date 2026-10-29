@@ -67,6 +67,7 @@ class HomeworkService:
         student_attempt: str = "",
         image_data_url: str = "",
         allow_general_knowledge: bool = False,
+        history: list[dict[str, str]] | None = None,
     ) -> HomeworkGuidance:
         clean_question = question.strip()
         clean_attempt = student_attempt.strip()
@@ -88,11 +89,15 @@ class HomeworkService:
         if mode == "review" and not clean_attempt:
             raise HomeworkValidationError("检查模式需要先填写你的尝试")
 
+        conversation_context = self._conversation_context(history or [])
+
         results = self.retrieval.search(course_id, clean_question, limit=3)
         assessment = assess_evidence(clean_question, results)
         if not results:
             if allow_general_knowledge and self.generator is not None:
                 prompt_question = clean_question
+                if conversation_context:
+                    prompt_question = f"{conversation_context}\n\n当前追问：\n{prompt_question}"
                 if clean_attempt:
                     prompt_question += f"\n\n学生已有尝试：\n{clean_attempt}"
                 try:
@@ -136,6 +141,8 @@ class HomeworkService:
 
         citations = [self._citation(index, result) for index, result in enumerate(results, 1)]
         prompt_question = clean_question
+        if conversation_context:
+            prompt_question = f"{conversation_context}\n\n当前追问：\n{prompt_question}"
         if clean_attempt:
             prompt_question += f"\n\n学生已有尝试：\n{clean_attempt}"
         generation_failed = False
@@ -168,6 +175,20 @@ class HomeworkService:
             citations,
             assessment,
         )
+
+    @staticmethod
+    def _conversation_context(history: list[dict[str, str]]) -> str:
+        lines: list[str] = []
+        for item in history[-6:]:
+            role = item.get("role", "")
+            content = item.get("content", "").strip()
+            if role not in {"user", "assistant"} or not content:
+                continue
+            label = "用户" if role == "user" else "助手"
+            lines.append(f"{label}：{content[:4000]}")
+        if not lines:
+            return ""
+        return "最近对话（只用于理解追问，不作为课程资料或引用）：\n" + "\n".join(lines)
 
     @staticmethod
     def _citation(number: int, result: SearchResult) -> Citation:

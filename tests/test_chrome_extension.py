@@ -10,7 +10,7 @@ class ChromeExtensionTests(unittest.TestCase):
     def test_manifest_uses_active_tab_not_broad_browsing_access(self) -> None:
         manifest = json.loads((self.root / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["manifest_version"], 3)
-        self.assertEqual(manifest["version"], "0.2.0")
+        self.assertEqual(manifest["version"], "0.3.0")
         self.assertIn("activeTab", manifest["permissions"])
         self.assertIn("scripting", manifest["permissions"])
         self.assertNotIn("tabs", manifest["permissions"])
@@ -31,6 +31,13 @@ class ChromeExtensionTests(unittest.TestCase):
         self.assertIn('id="allow-general-knowledge"', html)
         self.assertIn("allow_general_knowledge: allowGeneralKnowledge.checked", script)
         self.assertIn('response.grounding_status === "general_knowledge"', script)
+
+    def test_popup_supports_follow_up_chat(self) -> None:
+        html = (self.root / "popup.html").read_text(encoding="utf-8")
+        script = (self.root / "popup.js").read_text(encoding="utf-8")
+        self.assertIn('id="follow-up-form"', html)
+        self.assertIn("history: history.slice(-6)", script)
+        self.assertIn('followUpForm.addEventListener("submit"', script)
 
 
 if __name__ == "__main__":

@@ -3,8 +3,11 @@ const courseSelect = document.querySelector("#course");
 const status = document.querySelector("#status");
 const result = document.querySelector("#result");
 const actions = document.querySelector("#actions");
+const followUpForm = document.querySelector("#follow-up-form");
+const followUpInput = document.querySelector("#follow-up");
 const allowGeneralKnowledge = document.querySelector("#allow-general-knowledge");
 let latestDraft = "";
+let conversation = [];
 
 async function request(path, options = {}) {
   const response = await fetch(`${API}${path}`, options);
@@ -51,6 +54,45 @@ async function readCurrentPage() {
   return `网页标题：${values[0]?.title || tab.title || "当前作业页面"}\n\n页面中的作业内容：\n${text}`;
 }
 
+function renderConversation() {
+  result.replaceChildren(...conversation.map(message => {
+    const section = document.createElement("section");
+    const label = document.createElement("strong");
+    label.textContent = message.role === "user" ? "你的追问" : "Coursework AI";
+    const content = document.createElement("div");
+    content.textContent = message.content;
+    section.append(label, content);
+    return section;
+  }));
+  result.scrollTop = result.scrollHeight;
+}
+
+async function generate(question, history = []) {
+  const courseId = Number(courseSelect.value);
+  return request(`/api/courses/${courseId}/homework-guidance`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      question,
+      mode: "draft",
+      allow_general_knowledge: allowGeneralKnowledge.checked,
+      history: history.slice(-6)
+    })
+  });
+}
+
+function showGenerationStatus(response) {
+  if (response.grounding_status === "grounded") {
+    status.textContent = `已生成，引用 ${response.citations.length} 条课程依据。`;
+  } else if (response.grounding_status === "general_knowledge") {
+    status.textContent = "已使用 AI 通用知识生成，未使用课程资料。";
+  } else {
+    status.textContent = allowGeneralKnowledge.checked
+      ? "未成功使用通用知识，请检查 AI 模型配置。"
+      : "课程资料不足，请补充相关页面或允许通用知识。";
+  }
+}
+
 document.querySelector("#analyze").addEventListener("click", async () => {
   status.textContent = "正在读取当前页面并检索课程资料…";
   result.hidden = true;
@@ -59,30 +101,44 @@ document.querySelector("#analyze").addEventListener("click", async () => {
     const question = await readCurrentPage();
     const courseId = Number(courseSelect.value);
     await chrome.storage.local.set({courseId, allowGeneralKnowledge: allowGeneralKnowledge.checked});
-    const response = await request(`/api/courses/${courseId}/homework-guidance`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        question,
-        mode: "draft",
-        allow_general_knowledge: allowGeneralKnowledge.checked
-      })
-    });
+    const response = await generate(question);
     latestDraft = response.guidance;
-    result.textContent = latestDraft;
+    conversation = [
+      {role: "user", content: "请根据当前网页完成这道作业。"},
+      {role: "assistant", content: latestDraft}
+    ];
+    renderConversation();
     result.hidden = false;
+    followUpForm.hidden = false;
     actions.hidden = false;
-    if (response.grounding_status === "grounded") {
-      status.textContent = `已生成，引用 ${response.citations.length} 条课程依据。`;
-    } else if (response.grounding_status === "general_knowledge") {
-      status.textContent = "已使用 AI 通用知识生成，未使用课程资料。";
-    } else {
-      status.textContent = allowGeneralKnowledge.checked
-        ? "未成功使用通用知识，请检查 AI 模型配置。"
-        : "课程资料不足，请补充相关页面或允许通用知识。";
-    }
+    showGenerationStatus(response);
   } catch (error) {
     status.textContent = error.message;
+  }
+});
+
+followUpForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  const question = followUpInput.value.trim();
+  if (!question) return;
+  const history = conversation.slice(-6);
+  conversation.push({role: "user", content: question});
+  renderConversation();
+  followUpInput.value = "";
+  document.querySelector("#follow-up-send").disabled = true;
+  status.textContent = "正在继续回答…";
+  try {
+    const response = await generate(question, history);
+    latestDraft = response.guidance;
+    conversation.push({role: "assistant", content: latestDraft});
+    conversation = conversation.slice(-6);
+    renderConversation();
+    showGenerationStatus(response);
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    document.querySelector("#follow-up-send").disabled = false;
+    followUpInput.focus();
   }
 });
 

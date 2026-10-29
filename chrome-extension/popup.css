@@ -7,12 +7,17 @@ header span { color: #666; font-size: 10px; text-transform: uppercase; letter-sp
 label { display: grid; gap: 7px; color: #aaa; font-size: 12px; }
 .knowledge-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; }
 .knowledge-toggle input { width: 14px; height: 14px; margin: 0; accent-color: #eee; }
-select, button { border: 1px solid #333; border-radius: 9px; color: #ddd; background: #151515; font: inherit; }
+select, button, textarea { border: 1px solid #333; border-radius: 9px; color: #ddd; background: #151515; font: inherit; }
 select { width: 100%; padding: 9px; }
+textarea { width: 100%; padding: 10px; resize: vertical; line-height: 1.45; }
 button { padding: 9px 11px; cursor: pointer; }
 button:hover { border-color: #555; }
 .primary { width: 100%; color: #050505; background: #f1f1f1; font-weight: 700; }
 .notice { color: #777; font-size: 11px; line-height: 1.55; }
 #status { min-height: 17px; color: #888; font-size: 11px; }
 #result { max-height: 330px; overflow: auto; padding: 13px; border: 1px solid #292929; border-radius: 10px; color: #d7d7d7; background: #101010; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+#result section + section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #292929; }
+#result strong { display: block; margin-bottom: 5px; color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+#follow-up-form { display: grid; gap: 8px; margin-top: 10px; }
+#follow-up-form[hidden] { display: none; }
 .actions { display: flex; gap: 8px; margin-top: 10px; }

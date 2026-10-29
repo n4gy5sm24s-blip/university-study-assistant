@@ -175,6 +175,26 @@ class HomeworkServiceTests(unittest.TestCase):
         self.assertEqual(result.grounding_status, "no_evidence")
         self.assertIn("AI 模型配置", result.guidance)
 
+    def test_general_knowledge_follow_up_includes_recent_history(self) -> None:
+        generator = CapturingGenerator()
+        service = HomeworkService(
+            self.database,
+            generator=generator,
+            use_environment_generator=False,
+        )
+        service.guide(
+            self.course.id,
+            "Make it shorter.",
+            allow_general_knowledge=True,
+            history=[
+                {"role": "user", "content": "Write an invitation email."},
+                {"role": "assistant", "content": "Dear Alex, would you like to study together?"},
+            ],
+        )
+        self.assertIn("最近对话", generator.question)
+        self.assertIn("Write an invitation email", generator.question)
+        self.assertIn("当前追问", generator.question)
+
     def test_partial_evidence_identifies_what_to_capture(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)
         result = service.guide(

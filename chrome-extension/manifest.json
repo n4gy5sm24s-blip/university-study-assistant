@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Coursework AI Companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "在用户主动点击时读取当前作业页面，并交给本地 Coursework AI 生成课程化草稿。",
   "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
   "host_permissions": ["http://127.0.0.1:8000/*"],

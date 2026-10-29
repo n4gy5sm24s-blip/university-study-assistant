@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header><strong>Coursework AI</strong><span>Chrome Companion v0.2</span></header>
+    <header><strong>Coursework AI</strong><span>Chrome Companion v0.3</span></header>
     <label>使用课程<select id="course"></select></label>
     <label class="knowledge-toggle">
       <input id="allow-general-knowledge" type="checkbox" checked />
@@ -17,6 +17,10 @@
     <button id="analyze" class="primary">读取当前页面并生成草稿</button>
     <p id="status"></p>
     <article id="result" hidden></article>
+    <form id="follow-up-form" hidden>
+      <textarea id="follow-up" rows="2" placeholder="继续追问，例如：改短一点、用更简单的英语…"></textarea>
+      <button id="follow-up-send" class="primary" type="submit">继续问</button>
+    </form>
     <div class="actions" hidden id="actions">
       <button id="copy">复制草稿</button>
       <button id="open">打开作业机</button>
