@@ -17,6 +17,11 @@ GUIDANCE_INSTRUCTIONS = {
     "review": "检查学生已有尝试：指出正确之处、遗漏、逻辑问题和下一步修改建议，不冒充学生重写整份作业。",
 }
 
+GENERAL_KNOWLEDGE_NOTICE = (
+    "说明：以下内容未使用课程资料或课程引用，而是基于模型通用知识生成。"
+    "请核对题目要求、事实和老师的 AI 使用规则。"
+)
+
 
 @dataclass(frozen=True)
 class HomeworkGuidance:
@@ -61,6 +66,7 @@ class HomeworkService:
         mode: str = "draft",
         student_attempt: str = "",
         image_data_url: str = "",
+        allow_general_knowledge: bool = False,
     ) -> HomeworkGuidance:
         clean_question = question.strip()
         clean_attempt = student_attempt.strip()
@@ -85,10 +91,43 @@ class HomeworkService:
         results = self.retrieval.search(course_id, clean_question, limit=3)
         assessment = assess_evidence(clean_question, results)
         if not results:
+            if allow_general_knowledge and self.generator is not None:
+                prompt_question = clean_question
+                if clean_attempt:
+                    prompt_question += f"\n\n学生已有尝试：\n{clean_attempt}"
+                try:
+                    preferences = self.preferences.get(course_id)
+                    guidance = self.generator.generate(
+                        prompt_question,
+                        [],
+                        (
+                            f"{GUIDANCE_INSTRUCTIONS[mode]}\n\n"
+                            "允许使用模型通用知识回答；不得生成课程引用、虚构来源或声称使用了课程资料。\n\n"
+                            f"本课程长期写作规则：{preferences.generation_instructions()}"
+                        ),
+                    )
+                    return HomeworkGuidance(
+                        question=clean_question,
+                        mode=mode,
+                        guidance=f"{GENERAL_KNOWLEDGE_NOTICE}\n\n{guidance}",
+                        grounding_status="general_knowledge",
+                        generation_method="openai_general_knowledge",
+                        citations=[],
+                        evidence_assessment=assessment,
+                    )
+                except Exception:
+                    pass
             return HomeworkGuidance(
                 question=clean_question,
                 mode=mode,
-                guidance="当前课程资料中没有找到足够依据。请按照下方建议补充相关教材页面。",
+                guidance=(
+                    "当前课程资料中没有找到足够依据。"
+                    + (
+                        "通用知识生成未成功，请检查 AI 模型配置后重试。"
+                        if allow_general_knowledge
+                        else "如果这道题不依赖课程资料，可以开启“允许通用知识”后重试；否则请补充相关教材页面。"
+                    )
+                ),
                 grounding_status="no_evidence",
                 generation_method="none",
                 citations=[],

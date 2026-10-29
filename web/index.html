@@ -35,7 +35,7 @@
           <div class="welcome" id="welcome">
             <div class="welcome-mark">C</div>
             <h1>今天要完成什么作业？</h1>
-            <p>选择课程，粘贴题目。我会先查找你的课程资料，再生成带依据的作业草稿。</p>
+            <p>选择课程，粘贴题目。我会优先查找课程资料；没有资料时也可以明确允许 AI 使用通用知识。</p>
           </div>
           <div class="message-list" id="message-list"></div>
         </section>
@@ -46,6 +46,10 @@
             <button class="mode-tab" data-mode="ask" type="button">随时问答</button>
             <button class="mode-tab" data-mode="review" type="button">检查答案</button>
           </div>
+          <label class="knowledge-toggle" id="knowledge-toggle">
+            <input id="allow-general-knowledge" type="checkbox" checked />
+            <span>资料不足时，允许 AI 使用通用知识</span>
+          </label>
           <form class="composer" id="composer-form">
             <textarea id="composer-input" rows="1" placeholder="粘贴作业题目，按 Enter 发送…"></textarea>
             <textarea id="attempt-input" class="attempt-input hidden" rows="2" placeholder="粘贴你已经写好的答案…"></textarea>

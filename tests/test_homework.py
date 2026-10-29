@@ -147,6 +147,34 @@ class HomeworkServiceTests(unittest.TestCase):
         )
         self.assertTrue(result.evidence_assessment.capture_suggestions)
 
+    def test_general_knowledge_can_be_explicitly_enabled(self) -> None:
+        generator = CapturingGenerator()
+        service = HomeworkService(
+            self.database,
+            generator=generator,
+            use_environment_generator=False,
+        )
+        result = service.guide(
+            self.course.id,
+            "Write a short email inviting a classmate to study English.",
+            allow_general_knowledge=True,
+        )
+        self.assertEqual(result.grounding_status, "general_knowledge")
+        self.assertEqual(result.generation_method, "openai_general_knowledge")
+        self.assertEqual(result.citations, [])
+        self.assertIn("未使用课程资料", result.guidance)
+        self.assertEqual(generator.task_instructions.count("允许使用模型通用知识"), 1)
+
+    def test_general_knowledge_requires_a_configured_generator(self) -> None:
+        service = HomeworkService(self.database, use_environment_generator=False)
+        result = service.guide(
+            self.course.id,
+            "Write a short email inviting a classmate to study English.",
+            allow_general_knowledge=True,
+        )
+        self.assertEqual(result.grounding_status, "no_evidence")
+        self.assertIn("AI 模型配置", result.guidance)
+
     def test_partial_evidence_identifies_what_to_capture(self) -> None:
         service = HomeworkService(self.database, use_environment_generator=False)
         result = service.guide(

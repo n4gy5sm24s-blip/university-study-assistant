@@ -87,6 +87,9 @@ button { color: inherit; }
 @keyframes message-in { from { opacity: 0; transform: translateY(6px); } }
 .composer-wrap { width: min(820px, calc(100% - 40px)); margin: 0 auto; padding: 8px 0 14px; background: #000; }
 .mode-tabs { display: flex; gap: 5px; margin: 0 0 8px 8px; }
+.knowledge-toggle { display: flex; align-items: center; gap: 7px; width: fit-content; margin: 0 0 8px 8px; color: #858585; font-size: .72rem; cursor: pointer; }
+.knowledge-toggle input { width: 14px; height: 14px; accent-color: #e8e8e8; }
+.knowledge-toggle.hidden { display: none; }
 .mode-tab { padding: 6px 10px; border: 0; border-radius: 7px; color: #656565; background: transparent; font-size: .72rem; cursor: pointer; }
 .mode-tab:hover { color: #aaa; }
 .mode-tab.active { color: #f2f2f2; background: #1b1b1b; }

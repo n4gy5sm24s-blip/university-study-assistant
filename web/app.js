@@ -3,7 +3,7 @@ const $$ = selector => [...document.querySelectorAll(selector)];
 
 const state = { courses: [], selectedCourse: null, mode: "draft", busy: false, homeworkImage: null, reviewSession: null, citations: new Map(), assignments: [], activeAssignment: null, chatHistory: [] };
 const modeCopy = {
-  draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "将根据当前课程资料生成作业草稿", label: "写作业" },
+  draft: { placeholder: "粘贴作业题目，按 Enter 发送…", hint: "优先使用课程资料；也可允许通用知识", label: "写作业" },
   ask: { placeholder: "输入你想问的问题…", hint: "将优先依据当前课程资料回答", label: "随时问答" },
   review: { placeholder: "输入原作业题目…", hint: "请同时粘贴你已经写好的答案", label: "检查答案" }
 };
@@ -170,6 +170,7 @@ function setMode(mode) {
   $("#composer-input").placeholder = modeCopy[mode].placeholder;
   $("#composer-hint").textContent = modeCopy[mode].hint;
   $("#attempt-input").classList.toggle("hidden", mode !== "review");
+  $("#knowledge-toggle").classList.toggle("hidden", mode === "ask");
   $("#attach-button").classList.toggle("hidden", mode === "ask");
   if (mode === "ask") clearHomeworkImage();
   if (mode !== "review") $("#attempt-input").value = "";
@@ -255,10 +256,22 @@ async function submitPrompt() {
     } else {
       result = await api(`/api/courses/${state.selectedCourse.id}/homework-guidance`, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({question: prompt, mode: state.mode, student_attempt: attempt, image_data_url: imageDataUrl})
+        body: JSON.stringify({
+          question: prompt,
+          mode: state.mode,
+          student_attempt: attempt,
+          image_data_url: imageDataUrl,
+          allow_general_knowledge: $("#allow-general-knowledge").checked
+        })
       });
       setWorkflow("draft");
-      addMessage("assistant", result.guidance, result.citations, generationLabel(result.generation_method), result.evidence_assessment);
+      addMessage(
+        "assistant",
+        result.guidance,
+        result.citations,
+        generationLabel(result.generation_method),
+        result.grounding_status === "general_knowledge" ? null : result.evidence_assessment
+      );
       if (state.mode === "draft" && result.grounding_status !== "no_evidence") {
         await saveAssignmentProject(displayedPrompt, result);
         $("#composer-status").textContent = "草稿已保存到作业项目";
@@ -377,6 +390,7 @@ $("#preferences-form").addEventListener("submit", async event => {
 
 function generationLabel(method) {
   if (method === "openai_responses") return "生成模型 · 已使用课程资料";
+  if (method === "openai_general_knowledge") return "生成模型 · 未使用课程资料";
   if (method === "extractive_fallback") return "模型不可用 · 已退回资料框架";
   if (method === "extractive") return "本地资料模式";
   return "未生成";
