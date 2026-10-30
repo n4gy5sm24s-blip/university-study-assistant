@@ -55,6 +55,18 @@
 
 然后访问 http://127.0.0.1:8000。
 
+## Windows 桌面版
+
+桌面版使用 Electron 打开现有界面，并自动启动打包后的 FastAPI 服务。安装后不需要先开终端。课程数据库、上传资料和本机模型配置位于 Windows 的应用用户数据目录，升级应用不会主动删除这些数据。
+
+开发运行与打包：
+
+    npm install
+    npm run desktop
+    npm run build:app
+
+生成的 Windows 便携版位于 `release-portable/Coursework-AI-Windows-0.1.0.zip`。解压后双击 `Coursework AI.exe` 即可使用，不需要另外安装 Python，也不需要先开终端。构建过程保留官方 Electron 可执行文件的签名，应用自己的代码仍需由用户审阅和信任。
+
 ## Railway 私有演示部署
 
 仓库包含 `railway.toml`，Railway 可以从 GitHub 自动安装依赖、启动 FastAPI，并使用 `/api/health` 检查服务状态。

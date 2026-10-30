@@ -8,3 +8,11 @@ data/*.db
 data/uploads/
 .pytest_cache/
 tests/.tmp/
+node_modules/
+dist/
+release/
+release-final/
+release-app*/
+release-portable/
+desktop-runtime/
+build/

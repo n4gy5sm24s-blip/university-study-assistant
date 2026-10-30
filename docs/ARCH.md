@@ -10,7 +10,7 @@
 
 - Base profile：course-centered learning workspace。
 - Capability modules：document ingestion、RAG、learning state、tutor workflow、evaluation。
-- MVP 运行方式：本地 Web 应用；Railway 可用于单用户私有演示，正式公开前必须增加认证和用户隔离。
+- MVP 运行方式：本地 Web 应用或 Electron Windows 桌面应用；桌面版自动启动本机 FastAPI，并把数据库、上传资料和模型配置放入 Windows 用户数据目录。Railway 可用于单用户私有演示，正式公开前必须增加认证和用户隔离。
 - 可选输入端：Chrome Companion 使用 `activeTab` 在用户点击时读取当前页，调用本机 API；不持有全站读取权限，不自动提交表单。
 - 推荐技术方案：Python、FastAPI、SQLite、简单 Web UI。
 - 模型和 Embedding：通过统一接口接入，避免绑定单一供应商。

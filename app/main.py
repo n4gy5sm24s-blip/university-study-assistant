@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response, status
@@ -40,7 +41,8 @@ from .review import ReviewCoachService, ReviewPlanService, ReviewValidationError
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 WEB_DIR = BASE_DIR / "web"
-load_dotenv(BASE_DIR / ".env")
+ENV_PATH = Path(os.environ.get("STUDY_ASSISTANT_ENV", BASE_DIR / ".env"))
+load_dotenv(ENV_PATH)
 
 app = FastAPI(title="大学生学习助手", version="0.1.0")
 app.add_middleware(
@@ -153,7 +155,7 @@ def update_model_configuration(payload: ModelConfigurationUpdate) -> dict[str, o
             detail="线上环境不允许通过网页修改模型密钥，请在部署平台配置环境变量。",
         )
     try:
-        current = save_model_configuration(BASE_DIR / ".env", payload.api_key, payload.model)
+        current = save_model_configuration(ENV_PATH, payload.api_key, payload.model)
     except ModelConfigurationError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     answer_service = GroundedAnswerService()

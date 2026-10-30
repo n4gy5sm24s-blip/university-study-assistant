@@ -1,0 +1,50 @@
+{
+  "name": "coursework-ai-desktop",
+  "version": "0.1.0",
+  "description": "Coursework AI Windows desktop application",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "desktop": "electron .",
+    "prepare:runtime": "powershell -ExecutionPolicy Bypass -File scripts/prepare-desktop-runtime.ps1",
+    "build:app": "npm run prepare:runtime && powershell -ExecutionPolicy Bypass -File scripts/build-portable-app.ps1",
+    "pack:app": "npm run prepare:runtime && electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ai.coursework.desktop",
+    "productName": "Coursework AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "app",
+        "to": "backend/app"
+      },
+      {
+        "from": "web",
+        "to": "backend/web"
+      },
+      {
+        "from": "desktop-runtime/python",
+        "to": "runtime/python"
+      },
+      {
+        "from": "desktop-runtime/packages",
+        "to": "runtime/packages"
+      }
+    ],
+    "win": {
+      "target": ["zip"],
+      "artifactName": "Coursework-AI-Windows-${version}.${ext}"
+    }
+  }
+}
