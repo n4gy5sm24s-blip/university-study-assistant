@@ -8,6 +8,18 @@ let mainWindow;
 let backendProcess;
 let isQuitting = false;
 
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
+
 function log(message) {
   try {
     fs.appendFileSync(
@@ -19,13 +31,12 @@ function log(message) {
   }
 }
 
-function reservePort() {
+function reservePort(port = 8000) {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
     server.unref();
     server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const port = server.address().port;
+    server.listen(port, "127.0.0.1", () => {
       server.close(() => resolve(port));
     });
   });
@@ -108,7 +119,7 @@ async function waitForBackend(url) {
 
 async function createWindow() {
   log("desktop startup");
-  const port = await reservePort();
+  const port = await reservePort(8000);
   const localUrl = `http://127.0.0.1:${port}`;
   startBackend(port);
   await waitForBackend(localUrl);
@@ -137,11 +148,13 @@ async function createWindow() {
   log(`window loaded: ${localUrl}`);
 }
 
-app.whenReady().then(createWindow).catch((error) => {
-  log(`startup failed: ${error?.stack || error}`);
-  dialog.showErrorBox("Coursework AI 启动失败", String(error?.message || error));
-  app.quit();
-});
+if (hasSingleInstanceLock) {
+  app.whenReady().then(createWindow).catch((error) => {
+    log(`startup failed: ${error?.stack || error}`);
+    dialog.showErrorBox("Coursework AI 启动失败", String(error?.message || error));
+    app.quit();
+  });
+}
 
 app.on("window-all-closed", () => app.quit());
 app.on("before-quit", () => {
