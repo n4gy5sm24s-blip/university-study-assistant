@@ -55,6 +55,12 @@
 
 然后访问 http://127.0.0.1:8000。
 
+也可以安装一键启动快捷方式：
+
+    powershell -ExecutionPolicy Bypass -File scripts/install-web-shortcut.ps1
+
+桌面的 `Open Coursework AI` 会自动启动本机后台并优先使用 Google Chrome 打开网页，同时继续读取原来的课程数据库。
+
 ## Windows 桌面版
 
 桌面版使用 Electron 打开现有界面，并自动启动打包后的 FastAPI 服务。安装后不需要先开终端。课程数据库、上传资料和本机模型配置位于 Windows 的应用用户数据目录，升级应用不会主动删除这些数据。

@@ -80,14 +80,23 @@ function startBackend(port) {
   const userData = app.getPath("userData");
   const dataDirectory = path.join(userData, "data");
   fs.mkdirSync(dataDirectory, { recursive: true });
+  let localData = {};
+  const localDataPath = path.join(process.resourcesPath, "local-data.json");
+  if (fs.existsSync(localDataPath)) {
+    try {
+      localData = JSON.parse(fs.readFileSync(localDataPath, "utf8"));
+    } catch (error) {
+      log(`local data config ignored: ${error.message}`);
+    }
+  }
   const launch = backendCommand(port);
   backendProcess = spawn(launch.command, launch.args, {
     ...launch.options,
     windowsHide: true,
     env: {
       ...(launch.options.env || process.env),
-      STUDY_ASSISTANT_DB: path.join(dataDirectory, "study_assistant.db"),
-      STUDY_ASSISTANT_ENV: path.join(userData, ".env"),
+      STUDY_ASSISTANT_DB: localData.database || path.join(dataDirectory, "study_assistant.db"),
+      STUDY_ASSISTANT_ENV: localData.environment || path.join(userData, ".env"),
     },
   });
   log(`backend start: ${launch.command} --port ${port}`);
